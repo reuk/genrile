@@ -1,0 +1,4 @@
+-Isrc
+-Wall
+-Werror
+-ferror-limit=100
