@@ -11,6 +11,5 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 add_subdirectory(src)
 
-#enable_testing()
-#add_subdirectory(tests)
-#include(CPack)
+enable_testing()
+add_subdirectory(tests)
