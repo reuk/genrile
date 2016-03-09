@@ -43,23 +43,8 @@ public:
 
     virtual Variadic clone() const = 0;
 
-    template <typename Func, typename It>
-    static std::ostream& comma_separate(std::ostream& os,
-                                        It begin,
-                                        It end,
-                                        const Func& func = Func()) {
-        auto dist = std::distance(begin, end);
-        auto counter = 0;
-        auto it = begin;
-        for (; counter < dist - 1; ++it, ++counter) {
-            func(*it) << ", ";
-        }
-        if (counter == dist - 1)
-            func(*it);
-        return os;
-    }
-
     virtual std::ostream& write_json_to_stream(std::ostream& os) const = 0;
+    virtual void read_json_from_stream(std::istream& is) = 0;
     std::string to_json() const;
 
     template <Type TYPE>
@@ -189,6 +174,7 @@ class Integer final : public PrimitiveJsonValue<int, Value::Type::integer> {
 public:
     Variadic clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
+    void read_json_from_stream(std::istream& is) override;
     using PrimitiveJsonValue::PrimitiveJsonValue;
 };
 
@@ -196,6 +182,7 @@ class Real final : public PrimitiveJsonValue<double, Value::Type::real> {
 public:
     Variadic clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
+    void read_json_from_stream(std::istream& is) override;
     using PrimitiveJsonValue::PrimitiveJsonValue;
 };
 
@@ -203,6 +190,7 @@ class Boolean final : public PrimitiveJsonValue<bool, Value::Type::boolean> {
 public:
     Variadic clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
+    void read_json_from_stream(std::istream& is) override;
     using PrimitiveJsonValue::PrimitiveJsonValue;
 };
 
@@ -211,8 +199,11 @@ class String final
 public:
     Variadic clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
-    using PrimitiveJsonValue::PrimitiveJsonValue;
+    void read_json_from_stream(std::istream& is) override;
+    String() = default;
     String(const char*);
+    String(const std::string&);
+    String(std::string&&);
 };
 
 class Array final
@@ -220,6 +211,7 @@ class Array final
 public:
     Variadic clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
+    void read_json_from_stream(std::istream& is) override;
 
     Array() = default;
 
@@ -276,6 +268,7 @@ class Object final : public PrimitiveJsonValue<std::map<String, Variadic>,
 public:
     Variadic clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
+    void read_json_from_stream(std::istream& is) override;
 
     Object() = default;
 
@@ -319,9 +312,8 @@ public:
     static constexpr auto type = Type::null;
     Type get_type() const override;
     Variadic clone() const override;
-    std::ostream& write_json_to_stream(std::ostream& os) const override {
-        return os << "null";
-    }
+    std::ostream& write_json_to_stream(std::ostream& os) const override;
+    void read_json_from_stream(std::istream& is) override;
 };
 
 class Variadic : public std::unique_ptr<Value> {

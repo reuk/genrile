@@ -1,6 +1,78 @@
+#include "parse_helpers.h"
 #include "value.h"
 
 #include <sstream>
+#include <regex>
+
+class Bracketer final {
+public:
+    Bracketer(std::ostream& os, const char* open = "{", const char* close = "}")
+            : os(os)
+            , close(close) {
+        os << open;
+    }
+    ~Bracketer() noexcept {
+        os << close;
+    }
+
+private:
+    std::ostream& os;
+    const char* close;
+};
+
+std::ostream& operator<<(std::ostream& os, const Genrile::Variadic& v) {
+    return v->write_json_to_stream(os);
+}
+
+std::ostream& operator<<(
+    std::ostream& os,
+    const std::pair<const Genrile::String, Genrile::Variadic>& v) {
+    v.first.write_json_to_stream(os) << ": ";
+    return v.second->write_json_to_stream(os);
+}
+
+class comma_separate_iterator
+    : public std::iterator<std::output_iterator_tag, void, void, void, void> {
+public:
+    comma_separate_iterator(std::ostream& os, const char* delim = ", ")
+            : os(os)
+            , delim(delim) {
+    }
+
+    template <typename T>
+    comma_separate_iterator& operator=(const T& t) {
+        if (!first && delim)
+            os << delim;
+        os << t;
+        first = false;
+        return *this;
+    }
+
+    comma_separate_iterator& operator*() {
+        return *this;
+    }
+
+    comma_separate_iterator& operator++() {
+        return *this;
+    }
+
+    comma_separate_iterator& operator++(int) {
+        return *this;
+    }
+
+private:
+    std::ostream& os;
+    const char* delim;
+    bool first{true};
+};
+
+template <typename It>
+static std::ostream& comma_separate(std::ostream& os, It begin, It end) {
+    std::copy(begin, end, comma_separate_iterator(os, ", "));
+    return os;
+}
+
+//----------------------------------------------------------------------------//
 
 namespace Genrile {
 
@@ -129,6 +201,36 @@ Variadic Integer::clone() const {
 std::ostream& Integer::write_json_to_stream(std::ostream& os) const {
     return os << value;
 }
+void Integer::read_json_from_stream(std::istream& is) {
+    ParseHelper helper(is);
+    if (helper.peek() == '0') {
+        helper.get();
+        value = std::stoi(helper.get_parsed());
+        return;
+    }
+    if (helper.peek() == '-')
+        helper.get();
+    if (helper.peek() == '1' || helper.peek() == '2' || helper.peek() == '3' ||
+        helper.peek() == '4' || helper.peek() == '5' || helper.peek() == '6' ||
+        helper.peek() == '7' || helper.peek() == '8' || helper.peek() == '9') {
+        helper.get();
+    } else {
+        throw ParseError(
+            0,
+            0,
+            "character immediately following '-' is not a non-zero integer");
+    }
+
+    while (helper.peek() == '0' || helper.peek() == '1' ||
+           helper.peek() == '2' || helper.peek() == '3' ||
+           helper.peek() == '4' || helper.peek() == '5' ||
+           helper.peek() == '6' || helper.peek() == '7' ||
+           helper.peek() == '8' || helper.peek() == '9') {
+        helper.get();
+    }
+
+    value = std::stoi(helper.get_parsed());
+}
 
 //----------------------------------------------------------------------------//
 
@@ -137,6 +239,8 @@ Variadic Real::clone() const {
 }
 std::ostream& Real::write_json_to_stream(std::ostream& os) const {
     return os << value;
+}
+void Real::read_json_from_stream(std::istream& is) {
 }
 
 //----------------------------------------------------------------------------//
@@ -147,6 +251,16 @@ Variadic Boolean::clone() const {
 std::ostream& Boolean::write_json_to_stream(std::ostream& os) const {
     return os << (value ? "true" : "false");
 }
+void Boolean::read_json_from_stream(std::istream& is) {
+    if (match_string(is, "true")) {
+        value = true;
+        return;
+    } else if (match_string(is, "false")) {
+        value = false;
+        return;
+    }
+    throw ParseError(0, 0, "value is not 'true' or 'false'");
+}
 
 //----------------------------------------------------------------------------//
 
@@ -154,11 +268,28 @@ Variadic String::clone() const {
     return Variadic(*this);
 }
 std::ostream& String::write_json_to_stream(std::ostream& os) const {
-    return os << "\"" << value << "\"";
+    Bracketer bracketer(os, "\"", "\"");
+    return os << value;
+}
+void String::read_json_from_stream(std::istream& is) {
+    if (!match_string(is, "\""))
+        throw ParseError(0, 0, "expected opening double-quotes");
+    ParseHelper helper(is);
+    while (helper.peek() != '"')
+        helper.get();
+    value = helper.get_parsed();
+    helper.get();
+    helper.set_successful();
 }
 
 String::String(const char* c)
         : PrimitiveJsonValue<std::string, Type::string>(c) {
+}
+String::String(const std::string& s)
+        : PrimitiveJsonValue<std::string, Value::Type::string>(s) {
+}
+String::String(std::string&& s)
+        : PrimitiveJsonValue<std::string, Value::Type::string>(std::move(s)) {
 }
 
 //----------------------------------------------------------------------------//
@@ -167,14 +298,10 @@ Variadic Array::clone() const {
     return Variadic(*this);
 }
 std::ostream& Array::write_json_to_stream(std::ostream& os) const {
-    os << "[";
-    return comma_separate(os,
-                          cbegin(),
-                          cend(),
-                          [&os](const auto& i) -> std::ostream& {
-                              return i->write_json_to_stream(os);
-                          })
-           << "]";
+    Bracketer bracketer(os, "[", "]");
+    return comma_separate(os, cbegin(), cend());
+}
+void Array::read_json_from_stream(std::istream& is) {
 }
 
 Array::Array(const Array& rhs)
@@ -286,15 +413,10 @@ Variadic Object::clone() const {
     return Variadic(*this);
 }
 std::ostream& Object::write_json_to_stream(std::ostream& os) const {
-    os << "{";
-    return comma_separate(os,
-                          cbegin(),
-                          cend(),
-                          [&os](const auto& i) -> std::ostream& {
-                              i.first.write_json_to_stream(os) << ": ";
-                              return i.second->write_json_to_stream(os);
-                          })
-           << "}";
+    Bracketer bracketer(os);
+    return comma_separate(os, cbegin(), cend());
+}
+void Object::read_json_from_stream(std::istream& is) {
 }
 
 Object::Object(const Object& rhs) {
@@ -386,6 +508,11 @@ Value::Type Null::get_type() const {
 }
 Variadic Null::clone() const {
     return Variadic(*this);
+}
+std::ostream& Null::write_json_to_stream(std::ostream& os) const {
+    return os << "null";
+}
+void Null::read_json_from_stream(std::istream& is) {
 }
 
 //----------------------------------------------------------------------------//
