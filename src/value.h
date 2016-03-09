@@ -129,10 +129,15 @@ struct Value::upcast_trait<Value::Type::null> {
     using type = Null;
 };
 
-template <typename Primitive>
+template <typename Primitive, Value::Type T>
 class PrimitiveJsonValue : public Value {
 public:
     using value_type = Primitive;
+    static constexpr auto type = T;
+
+    Type get_type() const override {
+        return type;
+    }
 
     PrimitiveJsonValue() = default;
 
@@ -180,47 +185,39 @@ protected:
     value_type value;
 };
 
-class Integer final : public PrimitiveJsonValue<int> {
+class Integer final : public PrimitiveJsonValue<int, Value::Type::integer> {
 public:
-    static constexpr auto type = Type::integer;
-    Type get_type() const override;
     Variadic clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
     using PrimitiveJsonValue::PrimitiveJsonValue;
 };
 
-class Real final : public PrimitiveJsonValue<double> {
+class Real final : public PrimitiveJsonValue<double, Value::Type::real> {
 public:
-    static constexpr auto type = Type::real;
-    Type get_type() const override;
     Variadic clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
     using PrimitiveJsonValue::PrimitiveJsonValue;
 };
 
-class Boolean final : public PrimitiveJsonValue<bool> {
+class Boolean final : public PrimitiveJsonValue<bool, Value::Type::boolean> {
 public:
-    static constexpr auto type = Type::boolean;
-    Type get_type() const override;
     Variadic clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
     using PrimitiveJsonValue::PrimitiveJsonValue;
 };
 
-class String final : public PrimitiveJsonValue<std::string> {
+class String final
+    : public PrimitiveJsonValue<std::string, Value::Type::string> {
 public:
-    static constexpr auto type = Type::string;
-    Type get_type() const override;
     Variadic clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
     using PrimitiveJsonValue::PrimitiveJsonValue;
     String(const char*);
 };
 
-class Array final : public PrimitiveJsonValue<std::vector<Variadic>> {
+class Array final
+    : public PrimitiveJsonValue<std::vector<Variadic>, Value::Type::array> {
 public:
-    static constexpr auto type = Type::array;
-    Type get_type() const override;
     Variadic clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
 
@@ -274,10 +271,9 @@ public:
     void pop_back();
 };
 
-class Object final : public PrimitiveJsonValue<std::map<String, Variadic>> {
+class Object final : public PrimitiveJsonValue<std::map<String, Variadic>,
+                                               Value::Type::object> {
 public:
-    static constexpr auto type = Type::object;
-    Type get_type() const override;
     Variadic clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
 
@@ -351,9 +347,9 @@ public:
 }
 
 namespace std {
-template <typename Primitive>
-void swap(Genrile::PrimitiveJsonValue<Primitive>& a,
-          Genrile::PrimitiveJsonValue<Primitive>& b) {
+template <typename Primitive, Genrile::Value::Type T>
+void swap(Genrile::PrimitiveJsonValue<Primitive, T>& a,
+          Genrile::PrimitiveJsonValue<Primitive, T>& b) {
     std::swap(a.value, b.value);
 }
 }

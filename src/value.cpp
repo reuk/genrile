@@ -123,9 +123,6 @@ bool Variadic::operator!=(const Variadic& v) const {
 
 //----------------------------------------------------------------------------//
 
-Value::Type Integer::get_type() const {
-    return type;
-}
 Variadic Integer::clone() const {
     return Variadic(*this);
 }
@@ -135,9 +132,6 @@ std::ostream& Integer::write_json_to_stream(std::ostream& os) const {
 
 //----------------------------------------------------------------------------//
 
-Value::Type Real::get_type() const {
-    return type;
-}
 Variadic Real::clone() const {
     return Variadic(*this);
 }
@@ -147,9 +141,6 @@ std::ostream& Real::write_json_to_stream(std::ostream& os) const {
 
 //----------------------------------------------------------------------------//
 
-Value::Type Boolean::get_type() const {
-    return type;
-}
 Variadic Boolean::clone() const {
     return Variadic(*this);
 }
@@ -159,9 +150,6 @@ std::ostream& Boolean::write_json_to_stream(std::ostream& os) const {
 
 //----------------------------------------------------------------------------//
 
-Value::Type String::get_type() const {
-    return type;
-}
 Variadic String::clone() const {
     return Variadic(*this);
 }
@@ -170,14 +158,11 @@ std::ostream& String::write_json_to_stream(std::ostream& os) const {
 }
 
 String::String(const char* c)
-        : PrimitiveJsonValue<std::string>(c) {
+        : PrimitiveJsonValue<std::string, Type::string>(c) {
 }
 
 //----------------------------------------------------------------------------//
 
-Value::Type Array::get_type() const {
-    return type;
-}
 Variadic Array::clone() const {
     return Variadic(*this);
 }
@@ -297,9 +282,6 @@ void Array::pop_back() {
 
 //----------------------------------------------------------------------------//
 
-Value::Type Object::get_type() const {
-    return type;
-}
 Variadic Object::clone() const {
     return Variadic(*this);
 }
