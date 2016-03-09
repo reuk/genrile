@@ -6,4 +6,4 @@ include_directories(
     "/usr/local/include/"
 )
 
-add_library(json-parser STATIC ${sources})
+add_library(genrile STATIC ${sources})

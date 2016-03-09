@@ -5,7 +5,7 @@
 #include <map>
 #include <ostream>
 
-namespace JsonParser {
+namespace Genrile {
 
 class Value;
 class Integer;
@@ -352,8 +352,8 @@ public:
 
 namespace std {
 template <typename Primitive>
-void swap(JsonParser::PrimitiveJsonValue<Primitive>& a,
-          JsonParser::PrimitiveJsonValue<Primitive>& b) {
+void swap(Genrile::PrimitiveJsonValue<Primitive>& a,
+          Genrile::PrimitiveJsonValue<Primitive>& b) {
     std::swap(a.value, b.value);
 }
 }

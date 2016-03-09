@@ -8,6 +8,6 @@ include_directories(
 )
 
 add_executable(tests ${sources})
-target_link_libraries(tests json-parser)
+target_link_libraries(tests genrile)
 
-add_test(json-parser tests)
+add_test(genrile tests)

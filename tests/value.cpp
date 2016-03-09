@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-using namespace JsonParser;
+using namespace Genrile;
 
 TEST_CASE("create some nested values", "[Value]") {
     Array array;

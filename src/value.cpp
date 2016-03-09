@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-namespace JsonParser {
+namespace Genrile {
 
 Integer& Value::get_integer() {
     return get<Type::integer>();
