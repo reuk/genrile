@@ -384,9 +384,9 @@ std::ostream& Array::write_json_to_stream(std::ostream& os) const {
 void Array::read_json_from_stream(std::istream& is) {
     if (!match_string(is, "["))
         throw ParseError(0, 0, "expected opening brace");
-    ParseHelper helper(is);
+    StreamPosSaver helper(is);
     if (helper.peek_is(']')) {
-        helper.get();
+        is.get();
         helper.set_successful();
         return;
     }
@@ -398,12 +398,14 @@ void Array::read_json_from_stream(std::istream& is) {
         v.read_json_from_stream(is);
         value.emplace_back(std::move(v));
 
+        is >> std::ws;
+
         if (helper.peek_is(']')) {
-            helper.get();
+            is.get();
             helper.set_successful();
             return;
         } else if (helper.peek_is(',')) {
-            helper.get();
+            is.get();
         } else {
             throw ParseError(0, 0, "expected comma or closing brace");
         }
@@ -413,6 +415,9 @@ void Array::read_json_from_stream(std::istream& is) {
 Array::Array(std::vector<Variadic>&& v)
         : PrimitiveJsonValue<std::vector<Variadic>, Value::Type::array>(
               std::move(v)) {
+}
+Array::Array(std::initializer_list<Variadic> il)
+        : PrimitiveJsonValue<std::vector<Variadic>, Value::Type::array>(il) {
 }
 
 Array::value_type::reference Array::at(value_type::size_type pos) {
@@ -517,16 +522,47 @@ std::ostream& Object::write_json_to_stream(std::ostream& os) const {
     return comma_separate(os, cbegin(), cend());
 }
 void Object::read_json_from_stream(std::istream& is) {
-    throw ParseError(0, 0, "parser not implemented");
-}
+    if (!match_string(is, "{"))
+        throw ParseError(0, 0, "expected opening brace");
+    StreamPosSaver helper(is);
+    if (helper.peek_is('}')) {
+        is.get();
+        helper.set_successful();
+        return;
+    }
 
-Object::Object(const Object& rhs) {
-    for (const auto& i : rhs) {
-        value[i.first] = i.second;
+    value.clear();
+
+    while (true) {
+        String string;
+        string.read_json_from_stream(is);
+
+        is >> std::ws;
+
+        if (!match_string(is, ":"))
+            throw ParseError(0, 0, "expected ':' after string");
+
+        Variadic v;
+        v.read_json_from_stream(is);
+        value[string] = std::move(v);
+
+        is >> std::ws;
+
+        if (helper.peek_is('}')) {
+            is.get();
+            helper.set_successful();
+            return;
+        } else if (helper.peek_is(',')) {
+            is.get();
+        } else {
+            throw ParseError(0, 0, "expected comma or closing brace");
+        }
     }
 }
-Object& Object::operator=(const Object& rhs) {
-    return *this;
+
+Object::Object(std::initializer_list<std::pair<const String, Variadic>> il)
+        : PrimitiveJsonValue<std::map<String, Variadic>, Value::Type::object>(
+              il) {
 }
 
 Object::value_type::iterator Object::begin() {

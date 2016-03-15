@@ -1,8 +1,21 @@
 #include "parse_helpers.h"
 
-#include <sstream>
-
 namespace Genrile {
+
+StreamPosSaver::StreamPosSaver(std::istream& is)
+        : is(is)
+        , pos(is.tellg()) {
+}
+void StreamPosSaver::set_unwind(bool b) {
+    unwind = b;
+}
+StreamPosSaver::~StreamPosSaver() noexcept {
+    if (unwind)
+        is.seekg(pos);
+}
+void StreamPosSaver::set_successful() {
+    set_unwind(false);
+}
 
 ParseError::ParseError(int line, int column, const std::string& str)
         : line(line)
@@ -16,10 +29,7 @@ const char* ParseError::what() const noexcept {
 }
 
 ParseHelper::ParseHelper(std::istream& is)
-        : is(is) {
-}
-ParseHelper::~ParseHelper() {
-    unget();
+        : StreamPosSaver(is) {
 }
 char ParseHelper::peek() const {
     return is.peek();
@@ -27,30 +37,26 @@ char ParseHelper::peek() const {
 void ParseHelper::get() {
     got.push_back(is.get());
 }
-void ParseHelper::unget() {
-    for (auto i = 0u; i != got.size(); ++i)
-        is.unget();
-    set_successful();
-}
-void ParseHelper::set_successful() {
-    got = "";
-}
 std::string ParseHelper::get_parsed() {
     auto ret = got;
     set_successful();
     return ret;
 }
 
+void ParseHelper::set_successful() {
+    StreamPosSaver::set_successful();
+}
+
 bool match_string(std::istream& is, const std::string& str) {
-    ParseHelper helper(is);
+    StreamPosSaver saver(is);
     for (auto c : str) {
-        if (helper.peek() == c) {
-            helper.get();
+        if (is.peek() == c) {
+            is.get();
         } else {
             return false;
         }
     }
-    helper.set_successful();
+    saver.set_successful();
     return true;
 }
 }

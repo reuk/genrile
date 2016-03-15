@@ -7,7 +7,7 @@
 
 using namespace Genrile;
 
-template<typename T>
+template <typename T>
 void int_tests() {
     auto test_int = T();
 
@@ -51,7 +51,7 @@ TEST_CASE("parse integer", "[Integer]") {
     int_tests<Integer>();
 }
 
-template<typename T>
+template <typename T>
 void bool_tests() {
     auto test_bool = T();
 
@@ -77,7 +77,7 @@ TEST_CASE("parse boolean", "[Boolean]") {
     bool_tests<Boolean>();
 }
 
-template<typename T>
+template <typename T>
 void string_tests() {
     auto test_string = T();
 
@@ -100,7 +100,7 @@ TEST_CASE("parse string", "[String]") {
     string_tests<String>();
 }
 
-template<typename T>
+template <typename T>
 void array_tests() {
     auto test_array = T();
 
@@ -128,11 +128,38 @@ void array_tests() {
     REQUIRE(test_array == Array({1, "hello", 3, Array({4, 5, 6})}));
 
     test_read("[1, \"hello\", 3, [4, [], [true, false]]]");
-    REQUIRE(test_array == Array({1, "hello", 3, Array({4, Array(), Array({true, false})})}));
+    REQUIRE(test_array ==
+            Array({1, "hello", 3, Array({4, Array(), Array({true, false})})}));
 }
 
 TEST_CASE("parse array", "[Array]") {
     array_tests<Array>();
+}
+
+template <typename T>
+void object_tests() {
+    auto test_object = T();
+
+    auto test_read = [&test_object](auto str) {
+        std::istringstream ss(str);
+        test_object.read_json_from_stream();
+    };
+
+    test_read("{}");
+    REQUIRE(test_object == Object());
+
+    test_read("    {     \"str\"     :   \"str\"    }   ");
+    REQUIRE(test_object == Object({{"str", "str"}}));
+
+    test_read("    {     \"an object\"     :   {}    }   ");
+    REQUIRE(test_object == Object({{"str", Object()}}));
+
+    test_read(
+        "    {     \"an object containing an array\"     :   {\"the array\":  "
+        "[1, 2, 3, 4], \"another thing\": 5}    }   ");
+    REQUIRE(test_object == Object({{"an object containing an array",
+                                    Object({{"the array", Array({1, 2, 3, 4})},
+                                            {"another thing", 5}})}}));
 }
 
 TEST_CASE("parse variadic", "[Variadic]") {
@@ -142,9 +169,9 @@ TEST_CASE("parse variadic", "[Variadic]") {
     array_tests<Variadic>();
 }
 
+#if 0
 TEST_CASE("big string", "[Variadic]") {
-
-auto test_string = R"(
+    auto test_string = R"(
 [
     "JSON Test Pattern pass1",
     {"object with 1 member":["array with 1 element"]},
@@ -209,3 +236,4 @@ auto test_string = R"(
     std::istringstream ss(test_string);
     v.read_json_from_stream(ss);
 }
+#endif

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <sstream>
 
 namespace Genrile {
 
@@ -15,26 +16,37 @@ private:
     std::string str;
 };
 
-class ParseHelper final {
+class StreamPosSaver {
 public:
-    ParseHelper(std::istream& is);
-    ~ParseHelper();
-    char peek() const;
-    void get();
-    void unget();
-    void set_successful();
-    std::string get_parsed();
+    StreamPosSaver(std::istream& is);
+    void set_unwind(bool b);
+    virtual ~StreamPosSaver() noexcept;
+
+    virtual void set_successful();
 
     bool peek_is() const {
         return false;
     }
     template <typename... Ts>
     bool peek_is(char a, Ts&&... ts) const {
-        return peek() == a || peek_is(std::forward<Ts>(ts)...);
+        return is.peek() == a || peek_is(std::forward<Ts>(ts)...);
     }
 
-private:
     std::istream& is;
+    std::streampos pos;
+    bool unwind{true};
+};
+
+class ParseHelper final : public StreamPosSaver {
+public:
+    ParseHelper(std::istream& is);
+    char peek() const;
+    void get();
+    std::string get_parsed();
+
+    void set_successful() override;
+
+private:
     std::string got;
 };
 

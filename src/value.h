@@ -219,6 +219,7 @@ public:
     Array() = default;
 
     Array(std::vector<Variadic>&& v);
+    Array(std::initializer_list<Variadic> il);
 
     value_type::reference at(value_type::size_type pos);
     value_type::const_reference at(value_type::size_type pos) const;
@@ -271,11 +272,7 @@ public:
 
     Object() = default;
 
-    Object(const Object&);
-    Object& operator=(const Object&);
-
-    Object(Object&&) noexcept = default;
-    Object& operator=(Object&&) noexcept = default;
+    Object(std::initializer_list<std::pair<const String, Variadic>> il);
 
     value_type::iterator begin();
     value_type::const_iterator begin() const;
