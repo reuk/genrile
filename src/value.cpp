@@ -1,8 +1,9 @@
 #include "parse_helpers.h"
 #include "value.h"
 
-#include <sstream>
+#include <iostream>
 #include <regex>
+#include <sstream>
 
 class Bracketer final {
 public:
@@ -119,7 +120,9 @@ const Null& Value::get_null() const {
     return get<Type::null>();
 }
 
-std::string Value::to_json() const {
+//----------------------------------------------------------------------------//
+
+std::string Serializable::to_json() const {
     std::stringstream ss;
     write_json_to_stream(ss);
     return ss.str();
@@ -127,26 +130,30 @@ std::string Value::to_json() const {
 
 //----------------------------------------------------------------------------//
 
+Variadic::Variadic(const Value& v)
+        : value(v.clone()) {
+}
+
 Variadic::Variadic(const Integer& t)
-        : std::unique_ptr<Value>(std::make_unique<Integer>(t)) {
+        : Variadic(dynamic_cast<const Value&>(t)) {
 }
 Variadic::Variadic(const Real& t)
-        : std::unique_ptr<Value>(std::make_unique<Real>(t)) {
+        : Variadic(dynamic_cast<const Value&>(t)) {
 }
 Variadic::Variadic(const Boolean& t)
-        : std::unique_ptr<Value>(std::make_unique<Boolean>(t)) {
+        : Variadic(dynamic_cast<const Value&>(t)) {
 }
 Variadic::Variadic(const String& t)
-        : std::unique_ptr<Value>(std::make_unique<String>(t)) {
+        : Variadic(dynamic_cast<const Value&>(t)) {
 }
 Variadic::Variadic(const Array& t)
-        : std::unique_ptr<Value>(std::make_unique<Array>(t)) {
+        : Variadic(dynamic_cast<const Value&>(t)) {
 }
 Variadic::Variadic(const Object& t)
-        : std::unique_ptr<Value>(std::make_unique<Object>(t)) {
+        : Variadic(dynamic_cast<const Value&>(t)) {
 }
 Variadic::Variadic(const Null& t)
-        : std::unique_ptr<Value>(std::make_unique<Null>(t)) {
+        : Variadic(dynamic_cast<const Value&>(t)) {
 }
 
 Variadic::Variadic(Integer::value_type t)
@@ -165,9 +172,86 @@ Variadic::Variadic(const char* t)
         : Variadic(String(t)) {
 }
 
-bool Variadic::operator==(const Variadic& v) const {
-    auto& this_value = *(*this);
-    auto& that_value = *v;
+std::ostream& Variadic::write_json_to_stream(std::ostream& os) const {
+    return os;
+}
+
+void Variadic::read_json_from_stream(std::istream& is) {
+    is >> std::ws;
+    try {
+        Null v;
+        v.read_json_from_stream(is);
+        value = v.clone();
+        return;
+    } catch (const ParseError&) {
+    }
+
+    try {
+        Boolean v;
+        v.read_json_from_stream(is);
+        value = v.clone();
+        return;
+    } catch (const ParseError&) {
+    }
+
+    try {
+        Real v;
+        v.read_json_from_stream(is);
+        value = v.clone();
+        return;
+    } catch (const ParseError&) {
+    }
+
+    try {
+        Integer v;
+        v.read_json_from_stream(is);
+        value = v.clone();
+        return;
+    } catch (const ParseError&) {
+    }
+
+    try {
+        String v;
+        v.read_json_from_stream(is);
+        value = v.clone();
+        return;
+    } catch (const ParseError&) {
+    }
+
+    try {
+        Array v;
+        v.read_json_from_stream(is);
+        value = v.clone();
+        return;
+    } catch (const ParseError&) {
+    }
+
+    try {
+        Object v;
+        v.read_json_from_stream(is);
+        value = v.clone();
+        return;
+    } catch (const ParseError&) {
+    }
+
+    throw ParseError(0, 0, "could not parse variadic object");
+}
+
+Variadic::Variadic(const Variadic& rhs)
+        : value(rhs.value ? rhs.value->clone() : nullptr) {
+}
+Variadic& Variadic::operator=(const Variadic& rhs) {
+    value = rhs.value ? rhs.value->clone() : nullptr;
+    return *this;
+}
+
+Value* Variadic::operator->() const {
+    return value.operator->();
+}
+
+bool Variadic::operator==(const Variadic& that) const {
+    auto& this_value = *value;
+    auto& that_value = *that.value;
     auto this_type = this_value.get_type();
     if (that_value.get_type() == this_type) {
         switch (this_type) {
@@ -195,24 +279,22 @@ bool Variadic::operator!=(const Variadic& v) const {
 
 //----------------------------------------------------------------------------//
 
-Variadic Integer::clone() const {
-    return Variadic(*this);
+std::unique_ptr<Value> Integer::clone() const {
+    return std::make_unique<Integer>(*this);
 }
 std::ostream& Integer::write_json_to_stream(std::ostream& os) const {
     return os << value;
 }
 void Integer::read_json_from_stream(std::istream& is) {
     ParseHelper helper(is);
-    if (helper.peek() == '0') {
+    if (helper.peek_is('0')) {
         helper.get();
         value = std::stoi(helper.get_parsed());
         return;
     }
-    if (helper.peek() == '-')
+    if (helper.peek_is('-'))
         helper.get();
-    if (helper.peek() == '1' || helper.peek() == '2' || helper.peek() == '3' ||
-        helper.peek() == '4' || helper.peek() == '5' || helper.peek() == '6' ||
-        helper.peek() == '7' || helper.peek() == '8' || helper.peek() == '9') {
+    if (helper.peek_is('1', '2', '3', '4', '5', '6', '7', '8', '9')) {
         helper.get();
     } else {
         throw ParseError(
@@ -221,11 +303,7 @@ void Integer::read_json_from_stream(std::istream& is) {
             "character immediately following '-' is not a non-zero integer");
     }
 
-    while (helper.peek() == '0' || helper.peek() == '1' ||
-           helper.peek() == '2' || helper.peek() == '3' ||
-           helper.peek() == '4' || helper.peek() == '5' ||
-           helper.peek() == '6' || helper.peek() == '7' ||
-           helper.peek() == '8' || helper.peek() == '9') {
+    while (helper.peek_is('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
         helper.get();
     }
 
@@ -234,19 +312,20 @@ void Integer::read_json_from_stream(std::istream& is) {
 
 //----------------------------------------------------------------------------//
 
-Variadic Real::clone() const {
-    return Variadic(*this);
+std::unique_ptr<Value> Real::clone() const {
+    return std::make_unique<Real>(*this);
 }
 std::ostream& Real::write_json_to_stream(std::ostream& os) const {
     return os << value;
 }
 void Real::read_json_from_stream(std::istream& is) {
+    throw ParseError(0, 0, "parser not implemented");
 }
 
 //----------------------------------------------------------------------------//
 
-Variadic Boolean::clone() const {
-    return Variadic(*this);
+std::unique_ptr<Value> Boolean::clone() const {
+    return std::make_unique<Boolean>(*this);
 }
 std::ostream& Boolean::write_json_to_stream(std::ostream& os) const {
     return os << (value ? "true" : "false");
@@ -264,8 +343,8 @@ void Boolean::read_json_from_stream(std::istream& is) {
 
 //----------------------------------------------------------------------------//
 
-Variadic String::clone() const {
-    return Variadic(*this);
+std::unique_ptr<Value> String::clone() const {
+    return std::make_unique<String>(*this);
 }
 std::ostream& String::write_json_to_stream(std::ostream& os) const {
     Bracketer bracketer(os, "\"", "\"");
@@ -275,7 +354,8 @@ void String::read_json_from_stream(std::istream& is) {
     if (!match_string(is, "\""))
         throw ParseError(0, 0, "expected opening double-quotes");
     ParseHelper helper(is);
-    while (helper.peek() != '"')
+    //  TODO handle escaped characters here
+    while (!helper.peek_is('"'))
         helper.get();
     value = helper.get_parsed();
     helper.get();
@@ -294,25 +374,45 @@ String::String(std::string&& s)
 
 //----------------------------------------------------------------------------//
 
-Variadic Array::clone() const {
-    return Variadic(*this);
+std::unique_ptr<Value> Array::clone() const {
+    return std::make_unique<Array>(*this);
 }
 std::ostream& Array::write_json_to_stream(std::ostream& os) const {
     Bracketer bracketer(os, "[", "]");
     return comma_separate(os, cbegin(), cend());
 }
 void Array::read_json_from_stream(std::istream& is) {
+    if (!match_string(is, "["))
+        throw ParseError(0, 0, "expected opening brace");
+    ParseHelper helper(is);
+    if (helper.peek_is(']')) {
+        helper.get();
+        helper.set_successful();
+        return;
+    }
+
+    value.clear();
+
+    while (true) {
+        Variadic v;
+        v.read_json_from_stream(is);
+        value.emplace_back(std::move(v));
+
+        if (helper.peek_is(']')) {
+            helper.get();
+            helper.set_successful();
+            return;
+        } else if (helper.peek_is(',')) {
+            helper.get();
+        } else {
+            throw ParseError(0, 0, "expected comma or closing brace");
+        }
+    }
 }
 
-Array::Array(const Array& rhs)
-        : PrimitiveJsonValue(value_type(rhs.size())) {
-    std::transform(rhs.begin(),
-                   rhs.end(),
-                   value.begin(),
-                   [](const auto& i) { return i->clone(); });
-}
-Array& Array::operator=(const Array& rhs) {
-    return *this;
+Array::Array(std::vector<Variadic>&& v)
+        : PrimitiveJsonValue<std::vector<Variadic>, Value::Type::array>(
+              std::move(v)) {
 }
 
 Array::value_type::reference Array::at(value_type::size_type pos) {
@@ -390,7 +490,7 @@ void Array::clear() {
 
 Array::value_type::iterator Array::insert(value_type::const_iterator pos,
                                           const Variadic& v) {
-    return value.insert(pos, v->clone());
+    return value.insert(pos, v);
 }
 Array::value_type::iterator Array::erase(value_type::const_iterator pos) {
     return value.erase(pos);
@@ -401,7 +501,7 @@ Array::value_type::iterator Array::erase(value_type::const_iterator first,
 }
 
 void Array::push_back(const Variadic& v) {
-    value.push_back(v->clone());
+    value.push_back(v);
 }
 void Array::pop_back() {
     value.pop_back();
@@ -409,19 +509,20 @@ void Array::pop_back() {
 
 //----------------------------------------------------------------------------//
 
-Variadic Object::clone() const {
-    return Variadic(*this);
+std::unique_ptr<Value> Object::clone() const {
+    return std::make_unique<Object>(*this);
 }
 std::ostream& Object::write_json_to_stream(std::ostream& os) const {
     Bracketer bracketer(os);
     return comma_separate(os, cbegin(), cend());
 }
 void Object::read_json_from_stream(std::istream& is) {
+    throw ParseError(0, 0, "parser not implemented");
 }
 
 Object::Object(const Object& rhs) {
     for (const auto& i : rhs) {
-        value[i.first] = i.second->clone();
+        value[i.first] = i.second;
     }
 }
 Object& Object::operator=(const Object& rhs) {
@@ -506,13 +607,17 @@ Object::value_type::const_iterator Object::find(
 Value::Type Null::get_type() const {
     return type;
 }
-Variadic Null::clone() const {
-    return Variadic(*this);
+std::unique_ptr<Value> Null::clone() const {
+    return std::make_unique<Null>(*this);
 }
 std::ostream& Null::write_json_to_stream(std::ostream& os) const {
     return os << "null";
 }
 void Null::read_json_from_stream(std::istream& is) {
+    if (match_string(is, "null")) {
+        return;
+    }
+    throw ParseError(0, 0, "value is not 'null'");
 }
 
 //----------------------------------------------------------------------------//
