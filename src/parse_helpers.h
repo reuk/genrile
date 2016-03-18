@@ -37,14 +37,12 @@ public:
     bool unwind{true};
 };
 
-class ParseHelper final : public StreamPosSaver {
+class ParseHelper : public StreamPosSaver {
 public:
     ParseHelper(std::istream& is);
     char peek() const;
     void get();
     std::string get_parsed();
-
-    void set_successful() override;
 
 private:
     std::string got;

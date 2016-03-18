@@ -175,6 +175,8 @@ protected:
 
 class Integer final : public PrimitiveJsonValue<int, Value::Type::integer> {
 public:
+    Integer() = default;
+    Integer(std::istream& is);
     std::unique_ptr<Value> clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
     void read_json_from_stream(std::istream& is) override;
@@ -183,6 +185,8 @@ public:
 
 class Real final : public PrimitiveJsonValue<double, Value::Type::real> {
 public:
+    Real() = default;
+    Real(std::istream& is);
     std::unique_ptr<Value> clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
     void read_json_from_stream(std::istream& is) override;
@@ -191,6 +195,8 @@ public:
 
 class Boolean final : public PrimitiveJsonValue<bool, Value::Type::boolean> {
 public:
+    Boolean() = default;
+    Boolean(std::istream& is);
     std::unique_ptr<Value> clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
     void read_json_from_stream(std::istream& is) override;
@@ -200,13 +206,14 @@ public:
 class String final
     : public PrimitiveJsonValue<std::string, Value::Type::string> {
 public:
-    std::unique_ptr<Value> clone() const override;
-    std::ostream& write_json_to_stream(std::ostream& os) const override;
-    void read_json_from_stream(std::istream& is) override;
     String() = default;
+    String(std::istream& is);
     String(const char*);
     String(const std::string&);
     String(std::string&&);
+    std::unique_ptr<Value> clone() const override;
+    std::ostream& write_json_to_stream(std::ostream& os) const override;
+    void read_json_from_stream(std::istream& is) override;
 };
 
 class Array final
@@ -217,6 +224,7 @@ public:
     void read_json_from_stream(std::istream& is) override;
 
     Array() = default;
+    Array(std::istream& is);
 
     Array(std::vector<Variadic>&& v);
     Array(std::initializer_list<Variadic> il);
@@ -271,6 +279,7 @@ public:
     void read_json_from_stream(std::istream& is) override;
 
     Object() = default;
+    Object(std::istream& is);
 
     Object(std::initializer_list<std::pair<const String, Variadic>> il);
 
@@ -305,6 +314,9 @@ public:
 
 class Null final : public Value {
 public:
+    Null() = default;
+    Null(std::istream& is);
+
     static constexpr auto type = Type::null;
     Type get_type() const override;
     std::unique_ptr<Value> clone() const override;
@@ -315,6 +327,7 @@ public:
 class Variadic : public Serializable {
 public:
     Variadic() = default;
+    Variadic(std::istream& is);
 
     Variadic(const Value&);
 

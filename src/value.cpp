@@ -22,14 +22,14 @@ private:
 };
 
 std::ostream& operator<<(std::ostream& os, const Genrile::Variadic& v) {
-    return v->write_json_to_stream(os);
+    return v.write_json_to_stream(os);
 }
 
 std::ostream& operator<<(
     std::ostream& os,
     const std::pair<const Genrile::String, Genrile::Variadic>& v) {
     v.first.write_json_to_stream(os) << ": ";
-    return v.second->write_json_to_stream(os);
+    return v.second.write_json_to_stream(os);
 }
 
 class comma_separate_iterator
@@ -130,6 +130,9 @@ std::string Serializable::to_json() const {
 
 //----------------------------------------------------------------------------//
 
+Variadic::Variadic(std::istream& is) {
+    read_json_from_stream(is);
+}
 Variadic::Variadic(const Value& v)
         : value(v.clone()) {
 }
@@ -173,68 +176,55 @@ Variadic::Variadic(const char* t)
 }
 
 std::ostream& Variadic::write_json_to_stream(std::ostream& os) const {
-    return os;
+    return value->write_json_to_stream(os);
 }
 
 void Variadic::read_json_from_stream(std::istream& is) {
     is >> std::ws;
+
     try {
-        Null v;
-        v.read_json_from_stream(is);
-        value = v.clone();
+        value = Null(is).clone();
         return;
-    } catch (const ParseError&) {
+    } catch (const ParseError& e) {
     }
 
     try {
-        Boolean v;
-        v.read_json_from_stream(is);
-        value = v.clone();
+        value = Boolean(is).clone();
         return;
-    } catch (const ParseError&) {
+    } catch (const ParseError& e) {
     }
 
     try {
-        Real v;
-        v.read_json_from_stream(is);
-        value = v.clone();
+        value = Real(is).clone();
         return;
-    } catch (const ParseError&) {
+    } catch (const ParseError& e) {
     }
 
     try {
-        Integer v;
-        v.read_json_from_stream(is);
-        value = v.clone();
+        value = Integer(is).clone();
         return;
-    } catch (const ParseError&) {
+    } catch (const ParseError& e) {
     }
 
     try {
-        String v;
-        v.read_json_from_stream(is);
-        value = v.clone();
+        value = String(is).clone();
         return;
-    } catch (const ParseError&) {
+    } catch (const ParseError& e) {
     }
 
     try {
-        Array v;
-        v.read_json_from_stream(is);
-        value = v.clone();
+        value = Array(is).clone();
         return;
-    } catch (const ParseError&) {
+    } catch (const ParseError& e) {
     }
 
     try {
-        Object v;
-        v.read_json_from_stream(is);
-        value = v.clone();
+        value = Object(is).clone();
         return;
-    } catch (const ParseError&) {
+    } catch (const ParseError& e) {
     }
 
-    throw ParseError(0, 0, "could not parse variadic object");
+    throw ParseError(0, 0, "failed to parse variadic");
 }
 
 Variadic::Variadic(const Variadic& rhs)
@@ -279,6 +269,9 @@ bool Variadic::operator!=(const Variadic& v) const {
 
 //----------------------------------------------------------------------------//
 
+Integer::Integer(std::istream& is) {
+    read_json_from_stream(is);
+}
 std::unique_ptr<Value> Integer::clone() const {
     return std::make_unique<Integer>(*this);
 }
@@ -287,24 +280,18 @@ std::ostream& Integer::write_json_to_stream(std::ostream& os) const {
 }
 void Integer::read_json_from_stream(std::istream& is) {
     ParseHelper helper(is);
-    if (helper.peek_is('0')) {
-        helper.get();
-        value = std::stoi(helper.get_parsed());
-        return;
-    }
     if (helper.peek_is('-'))
         helper.get();
-    if (helper.peek_is('1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+    if (helper.peek_is('0')) {
         helper.get();
+    } else if (helper.peek_is('1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+        helper.get();
+        while (
+            helper.peek_is('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+            helper.get();
+        }
     } else {
-        throw ParseError(
-            0,
-            0,
-            "character immediately following '-' is not a non-zero integer");
-    }
-
-    while (helper.peek_is('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
-        helper.get();
+        throw ParseError(0, 0, "integer must contain at least one digit");
     }
 
     value = std::stoi(helper.get_parsed());
@@ -312,6 +299,9 @@ void Integer::read_json_from_stream(std::istream& is) {
 
 //----------------------------------------------------------------------------//
 
+Real::Real(std::istream& is) {
+    read_json_from_stream(is);
+}
 std::unique_ptr<Value> Real::clone() const {
     return std::make_unique<Real>(*this);
 }
@@ -319,11 +309,69 @@ std::ostream& Real::write_json_to_stream(std::ostream& os) const {
     return os << value;
 }
 void Real::read_json_from_stream(std::istream& is) {
-    throw ParseError(0, 0, "parser not implemented");
+    ParseHelper helper(is);
+
+    //  is number negative
+    if (helper.peek_is('-'))
+        helper.get();
+
+    //  if number starts with 0, it should be followed by a point
+    //  otherwise, it may be digit 1-9 followed by any number of digits 0-9
+    if (helper.peek_is('0')) {
+        helper.get();
+    } else if (helper.peek_is('1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+        helper.get();
+        while (
+            helper.peek_is('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+            helper.get();
+        }
+    } else {
+        throw ParseError(0, 0, "expected digit");
+    }
+
+    if (!helper.peek_is('.', 'e', 'E')) {
+        throw ParseError(0, 0, "real must contain '.', 'e', or 'E'");
+    }
+
+    //  if number has a point, it must be followed by at least one digit
+    if (helper.peek_is('.')) {
+        helper.get();
+        if (!helper.peek_is('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+            throw ParseError(0, 0, "decimal point must be followed by a digit");
+        }
+        while (
+            helper.peek_is('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+            helper.get();
+        }
+    }
+
+    if (helper.peek_is('e', 'E')) {
+        helper.get();
+        if (!helper.peek_is(
+                '+', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+            throw ParseError(
+                0, 0, "'e' or 'E' must be followed by '+', '-', or a digit");
+        }
+        if (helper.peek_is('+', '-')) {
+            helper.get();
+        }
+        if (!helper.peek_is('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+            throw ParseError(0, 0, "'+' or '-' must be followed by a digit");
+        }
+        while (
+            helper.peek_is('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')) {
+            helper.get();
+        }
+    }
+
+    value = std::stod(helper.get_parsed());
 }
 
 //----------------------------------------------------------------------------//
 
+Boolean::Boolean(std::istream& is) {
+    read_json_from_stream(is);
+}
 std::unique_ptr<Value> Boolean::clone() const {
     return std::make_unique<Boolean>(*this);
 }
@@ -343,6 +391,9 @@ void Boolean::read_json_from_stream(std::istream& is) {
 
 //----------------------------------------------------------------------------//
 
+String::String(std::istream& is) {
+    read_json_from_stream(is);
+}
 std::unique_ptr<Value> String::clone() const {
     return std::make_unique<String>(*this);
 }
@@ -351,15 +402,82 @@ std::ostream& String::write_json_to_stream(std::ostream& os) const {
     return os << value;
 }
 void String::read_json_from_stream(std::istream& is) {
+    StreamPosSaver helper(is);
     if (!match_string(is, "\""))
         throw ParseError(0, 0, "expected opening double-quotes");
-    ParseHelper helper(is);
-    //  TODO handle escaped characters here
-    while (!helper.peek_is('"'))
-        helper.get();
-    value = helper.get_parsed();
-    helper.get();
-    helper.set_successful();
+    value_type parsed;
+    while (true) {
+        if (helper.peek_is('"')) {
+            //  closing quote
+            value = parsed;
+            is.get();
+            helper.set_successful();
+            return;
+        } else if (helper.peek_is('\\')) {
+            //  control character
+            is.get();
+            switch (is.peek()) {
+                case '"':
+                    is.get();
+                    parsed.push_back('"');
+                    break;
+                case '\\':
+                    is.get();
+                    parsed.push_back('\\');
+                    break;
+                case '/':
+                    is.get();
+                    parsed.push_back('/');
+                    break;
+                case 'b':
+                    is.get();
+                    parsed.push_back('\b');
+                    break;
+                case 'f':
+                    is.get();
+                    parsed.push_back('\f');
+                    break;
+                case 'n':
+                    is.get();
+                    parsed.push_back('\n');
+                    break;
+                case 'r':
+                    is.get();
+                    parsed.push_back('\r');
+                    break;
+                case 't':
+                    is.get();
+                    parsed.push_back('\t');
+                    break;
+                case 'u': {
+                    is.get();
+                    std::string code;
+                    uint32_t codepoint = 0;
+                    for (int i = 0; i != 4; ++i) {
+                        auto c = is.peek();
+                        codepoint <<= 4;
+                        codepoint += static_cast<unsigned>(c);
+                        if (c >= '0' && c <= '9') {
+                            codepoint -= '0';
+                        } else if (c >= 'A' && c <= 'F') {
+                            codepoint -= 'A' - 10;
+                        } else if (c >= 'a' && c <= 'f') {
+                            codepoint -= 'a' - 10;
+                        } else {
+                            throw ParseError(0, 0, "expected 4 hex digits");
+                        }
+                    }
+                    parsed.push_back(codepoint);
+                    break;
+                }
+                default:
+                    throw ParseError(0, 0, "unrecognized control sequence");
+            }
+        } else {
+            //  anything else
+            parsed.push_back(is.get());
+        }
+    }
 }
 
 String::String(const char* c)
@@ -374,6 +492,9 @@ String::String(std::string&& s)
 
 //----------------------------------------------------------------------------//
 
+Array::Array(std::istream& is) {
+    read_json_from_stream(is);
+}
 std::unique_ptr<Value> Array::clone() const {
     return std::make_unique<Array>(*this);
 }
@@ -382,21 +503,23 @@ std::ostream& Array::write_json_to_stream(std::ostream& os) const {
     return comma_separate(os, cbegin(), cend());
 }
 void Array::read_json_from_stream(std::istream& is) {
+    value.clear();
+
+    StreamPosSaver helper(is);
+
     if (!match_string(is, "["))
         throw ParseError(0, 0, "expected opening brace");
-    StreamPosSaver helper(is);
+
+    is >> std::ws;
+
     if (helper.peek_is(']')) {
         is.get();
         helper.set_successful();
         return;
     }
 
-    value.clear();
-
     while (true) {
-        Variadic v;
-        v.read_json_from_stream(is);
-        value.emplace_back(std::move(v));
+        value.emplace_back(is);
 
         is >> std::ws;
 
@@ -514,6 +637,9 @@ void Array::pop_back() {
 
 //----------------------------------------------------------------------------//
 
+Object::Object(std::istream& is) {
+    read_json_from_stream(is);
+}
 std::unique_ptr<Value> Object::clone() const {
     return std::make_unique<Object>(*this);
 }
@@ -522,29 +648,29 @@ std::ostream& Object::write_json_to_stream(std::ostream& os) const {
     return comma_separate(os, cbegin(), cend());
 }
 void Object::read_json_from_stream(std::istream& is) {
+    value.clear();
+
+    StreamPosSaver helper(is);
     if (!match_string(is, "{"))
         throw ParseError(0, 0, "expected opening brace");
-    StreamPosSaver helper(is);
+
+    is >> std::ws;
+
     if (helper.peek_is('}')) {
         is.get();
         helper.set_successful();
         return;
     }
 
-    value.clear();
-
     while (true) {
-        String string;
-        string.read_json_from_stream(is);
-
+        is >> std::ws;
+        String string(is);
         is >> std::ws;
 
         if (!match_string(is, ":"))
             throw ParseError(0, 0, "expected ':' after string");
 
-        Variadic v;
-        v.read_json_from_stream(is);
-        value[string] = std::move(v);
+        value[string] = Variadic(is);
 
         is >> std::ws;
 
@@ -640,6 +766,9 @@ Object::value_type::const_iterator Object::find(
 
 //----------------------------------------------------------------------------//
 
+Null::Null(std::istream& is) {
+    read_json_from_stream(is);
+}
 Value::Type Null::get_type() const {
     return type;
 }

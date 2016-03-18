@@ -1,5 +1,7 @@
 #include "parse_helpers.h"
 
+#include <iostream>
+
 namespace Genrile {
 
 StreamPosSaver::StreamPosSaver(std::istream& is)
@@ -10,8 +12,10 @@ void StreamPosSaver::set_unwind(bool b) {
     unwind = b;
 }
 StreamPosSaver::~StreamPosSaver() noexcept {
-    if (unwind)
+    if (unwind) {
+        is.clear();
         is.seekg(pos);
+    }
 }
 void StreamPosSaver::set_successful() {
     set_unwind(false);
@@ -38,13 +42,8 @@ void ParseHelper::get() {
     got.push_back(is.get());
 }
 std::string ParseHelper::get_parsed() {
-    auto ret = got;
     set_successful();
-    return ret;
-}
-
-void ParseHelper::set_successful() {
-    StreamPosSaver::set_successful();
+    return got;
 }
 
 bool match_string(std::istream& is, const std::string& str) {

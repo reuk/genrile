@@ -1,6 +1,6 @@
 #include "catch.hpp"
-#include "value.h"
 #include "parse_helpers.h"
+#include "value.h"
 
 #include <iostream>
 #include <sstream>
@@ -9,42 +9,21 @@ using namespace Genrile;
 
 template <typename T>
 void int_tests() {
-    auto test_int = T();
-
-    auto test_read = [&test_int](auto str) {
+    auto test_read = [](auto str) {
         std::istringstream ss(str);
-        test_int.read_json_from_stream(ss);
+        return T(ss);
     };
 
-    test_read("0");
-    REQUIRE(test_int == Integer(0));
-
-    test_read("5");
-    REQUIRE(test_int == Integer(5));
-
-    test_read("-1");
-    REQUIRE(test_int == Integer(-1));
-
-    test_read("12345678");
-    REQUIRE(test_int == Integer(12345678));
-
-    test_read("-12345678");
-    REQUIRE(test_int == Integer(-12345678));
-
-    test_read("0x");
-    REQUIRE(test_int == Integer(0));
-
-    test_read("5x");
-    REQUIRE(test_int == Integer(5));
-
-    test_read("-1x");
-    REQUIRE(test_int == Integer(-1));
-
-    test_read("12345678x");
-    REQUIRE(test_int == Integer(12345678));
-
-    test_read("-12345678x");
-    REQUIRE(test_int == Integer(-12345678));
+    REQUIRE(test_read("0") == Integer(0));
+    REQUIRE(test_read("5") == Integer(5));
+    REQUIRE(test_read("-1") == Integer(-1));
+    REQUIRE(test_read("12345678") == Integer(12345678));
+    REQUIRE(test_read("-12345678") == Integer(-12345678));
+    REQUIRE(test_read("0x") == Integer(0));
+    REQUIRE(test_read("5x") == Integer(5));
+    REQUIRE(test_read("-1x") == Integer(-1));
+    REQUIRE(test_read("12345678x") == Integer(12345678));
+    REQUIRE(test_read("-12345678x") == Integer(-12345678));
 }
 
 TEST_CASE("parse integer", "[Integer]") {
@@ -52,25 +31,34 @@ TEST_CASE("parse integer", "[Integer]") {
 }
 
 template <typename T>
-void bool_tests() {
-    auto test_bool = T();
-
-    auto test_read = [&test_bool](auto str) {
+void real_tests() {
+    auto test_read = [](auto str) {
         std::istringstream ss(str);
-        test_bool.read_json_from_stream(ss);
+        return T(ss);
     };
 
-    test_read("true");
-    REQUIRE(test_bool == Boolean(true));
+    REQUIRE(test_read("0.0") == Real(0));
+    REQUIRE(test_read("-9876.543210") == Real(-9876.543210));
+    REQUIRE(test_read("0.123456789e-12") == Real(0.123456789e-12));
+    REQUIRE(test_read("1.234567890E+34") == Real(1.234567890E+34));
+    REQUIRE(test_read("23456789012E66") == Real(23456789012E66));
+}
 
-    test_read("false");
-    REQUIRE(test_bool == Boolean(false));
+TEST_CASE("parse real", "[Real]") {
+    real_tests<Real>();
+}
 
-    test_read("truethy");
-    REQUIRE(test_bool == Boolean(true));
+template <typename T>
+void bool_tests() {
+    auto test_read = [](auto str) {
+        std::istringstream ss(str);
+        return T(ss);
+    };
 
-    test_read("falsey");
-    REQUIRE(test_bool == Boolean(false));
+    REQUIRE(test_read("true") == Boolean(true));
+    REQUIRE(test_read("false") == Boolean(false));
+    REQUIRE(test_read("truethy") == Boolean(true));
+    REQUIRE(test_read("falsey") == Boolean(false));
 }
 
 TEST_CASE("parse boolean", "[Boolean]") {
@@ -79,21 +67,14 @@ TEST_CASE("parse boolean", "[Boolean]") {
 
 template <typename T>
 void string_tests() {
-    auto test_string = T();
-
-    auto test_read = [&test_string](auto str) {
+    auto test_read = [](auto str) {
         std::istringstream ss(str);
-        test_string.read_json_from_stream(ss);
+        return T(ss);
     };
 
-    test_read("\"\"");
-    REQUIRE(test_string == String(""));
-
-    test_read("\"false\"");
-    REQUIRE(test_string == String("false"));
-
-    test_read("\"true\"");
-    REQUIRE(test_string == String("true"));
+    REQUIRE(test_read("\"\"") == String(""));
+    REQUIRE(test_read("\"false\"") == String("false"));
+    REQUIRE(test_read("\"true\"") == String("true"));
 }
 
 TEST_CASE("parse string", "[String]") {
@@ -102,33 +83,21 @@ TEST_CASE("parse string", "[String]") {
 
 template <typename T>
 void array_tests() {
-    auto test_array = T();
-
-    auto test_read = [&test_array](auto str) {
+    auto test_read = [](auto str) {
         std::istringstream ss(str);
-        test_array.read_json_from_stream(ss);
+        return T(ss);
     };
 
-    test_read("[]");
-    REQUIRE(test_array == Array());
-
-    test_read("[[], []]");
-    REQUIRE(test_array == Array({Array(), Array()}));
-
-    test_read("[1]");
-    REQUIRE(test_array == Array({1}));
-
-    test_read("[1, 2, 3]");
-    REQUIRE(test_array == Array({1, 2, 3}));
-
-    test_read("[1, \"hello\", 3]");
-    REQUIRE(test_array == Array({1, "hello", 3}));
-
-    test_read("[1, \"hello\", 3, [4, 5, 6]]");
-    REQUIRE(test_array == Array({1, "hello", 3, Array({4, 5, 6})}));
-
-    test_read("[1, \"hello\", 3, [4, [], [true, false]]]");
-    REQUIRE(test_array ==
+    REQUIRE(test_read("[]") == Array());
+    REQUIRE(test_read("[[], []]") == Array({Array(), Array()}));
+    REQUIRE(test_read("[   [ ]     ,  [    ]  ]  ") ==
+            Array({Array(), Array()}));
+    REQUIRE(test_read("[1]") == Array({1}));
+    REQUIRE(test_read("[1, 2, 3]") == Array({1, 2, 3}));
+    REQUIRE(test_read("[1, \"hello\", 3]") == Array({1, "hello", 3}));
+    REQUIRE(test_read("[1, \"hello\", 3, [4, 5, 6]]") ==
+            Array({1, "hello", 3, Array({4, 5, 6})}));
+    REQUIRE(test_read("[1, \"hello\", 3, [4, [], [true, false]]]") ==
             Array({1, "hello", 3, Array({4, Array(), Array({true, false})})}));
 }
 
@@ -138,28 +107,29 @@ TEST_CASE("parse array", "[Array]") {
 
 template <typename T>
 void object_tests() {
-    auto test_object = T();
-
-    auto test_read = [&test_object](auto str) {
+    auto test_read = [](auto str) {
         std::istringstream ss(str);
-        test_object.read_json_from_stream();
+        return T(ss);
     };
 
-    test_read("{}");
-    REQUIRE(test_object == Object());
+    REQUIRE(test_read("{}") == Object());
+    REQUIRE(test_read("{     \"str\"     :   \"str\"    }   ") ==
+            Object({{"str", "str"}}));
+    REQUIRE(test_read("{     \"an object\"     :   {}    }   ") ==
+            Object({{"an object", Object()}}));
+    REQUIRE(test_read("{\"the array\":  [1, 2, 3, 4], \"another thing\": 5}") ==
+            Object({{"the array", Array({1, 2, 3, 4})}, {"another thing", 5}}));
+    REQUIRE(
+        test_read(
+            "{     \"an object containing an array\"     :   {\"the array\":  "
+            "[1, 2, 3, 4], \"another thing\": 5}    }   ") ==
+        Object({{"an object containing an array",
+                 Object({{"the array", Array({1, 2, 3, 4})},
+                         {"another thing", 5}})}}));
+}
 
-    test_read("    {     \"str\"     :   \"str\"    }   ");
-    REQUIRE(test_object == Object({{"str", "str"}}));
-
-    test_read("    {     \"an object\"     :   {}    }   ");
-    REQUIRE(test_object == Object({{"str", Object()}}));
-
-    test_read(
-        "    {     \"an object containing an array\"     :   {\"the array\":  "
-        "[1, 2, 3, 4], \"another thing\": 5}    }   ");
-    REQUIRE(test_object == Object({{"an object containing an array",
-                                    Object({{"the array", Array({1, 2, 3, 4})},
-                                            {"another thing", 5}})}}));
+TEST_CASE("parse object", "[Object]") {
+    object_tests<Object>();
 }
 
 TEST_CASE("parse variadic", "[Variadic]") {
@@ -167,9 +137,9 @@ TEST_CASE("parse variadic", "[Variadic]") {
     bool_tests<Variadic>();
     string_tests<Variadic>();
     array_tests<Variadic>();
+    object_tests<Variadic>();
 }
 
-#if 0
 TEST_CASE("big string", "[Variadic]") {
     auto test_string = R"(
 [
@@ -232,8 +202,7 @@ TEST_CASE("big string", "[Variadic]") {
 ,"rosebud"]
 )";
 
-    auto v = Variadic();
     std::istringstream ss(test_string);
-    v.read_json_from_stream(ss);
+    auto v = Variadic(ss);
+    v.write_json_to_stream(std::cout);
 }
-#endif
