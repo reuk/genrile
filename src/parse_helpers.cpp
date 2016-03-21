@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-namespace Genrile {
+namespace genrile {
 
 StreamPosSaver::StreamPosSaver(std::istream& is)
         : is(is)
@@ -19,17 +19,6 @@ StreamPosSaver::~StreamPosSaver() noexcept {
 }
 void StreamPosSaver::set_successful() {
     set_unwind(false);
-}
-
-ParseError::ParseError(int line, int column, const std::string& str)
-        : line(line)
-        , column(column)
-        , str(str) {
-}
-const char* ParseError::what() const noexcept {
-    std::stringstream ss;
-    ss << "parse error at line " << line << " column " << column << ": " << str;
-    return ss.str().c_str();
 }
 
 ParseHelper::ParseHelper(std::istream& is)

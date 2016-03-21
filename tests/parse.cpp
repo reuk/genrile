@@ -5,7 +5,7 @@
 #include <iostream>
 #include <sstream>
 
-using namespace Genrile;
+using namespace genrile;
 
 template <typename T>
 void int_tests() {

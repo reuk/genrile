@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-using namespace Genrile;
+using namespace genrile;
 
 TEST_CASE("create some nested values", "[Value]") {
     Array array = {

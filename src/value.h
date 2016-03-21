@@ -1,11 +1,13 @@
 #pragma once
 
+#include "types.h"
+
 #include <string>
 #include <vector>
 #include <map>
 #include <ostream>
 
-namespace Genrile {
+namespace genrile {
 
 class Value;
 class Integer;
@@ -18,7 +20,7 @@ class Null;
 class Variadic;
 
 //  TODO
-//  initializer list constructors
+//  eof checking
 
 class Serializable {
 public:
@@ -29,17 +31,7 @@ public:
 
 class Value : public Serializable {
 public:
-    enum class Type {
-        integer,
-        real,
-        boolean,
-        string,
-        array,
-        object,
-        null,
-    };
-
-    virtual Type get_type() const = 0;
+    virtual JsonType get_type() const = 0;
 
     Value() = default;
     virtual ~Value() noexcept = default;
@@ -50,20 +42,17 @@ public:
 
     virtual std::unique_ptr<Value> clone() const = 0;
 
-    template <Type TYPE>
-    struct upcast_trait {};
-
-    template <Type TYPE>
-    typename upcast_trait<TYPE>::type& get() {
+    template <JsonType TYPE>
+    typename JsonCastTrait<TYPE>::type& get() {
         if (get_type() != TYPE)
             throw std::runtime_error("incorrect type");
-        return dynamic_cast<typename upcast_trait<TYPE>::type&>(*this);
+        return dynamic_cast<typename JsonCastTrait<TYPE>::type&>(*this);
     }
-    template <Type TYPE>
-    const typename upcast_trait<TYPE>::type& get() const {
+    template <JsonType TYPE>
+    const typename JsonCastTrait<TYPE>::type& get() const {
         if (get_type() != TYPE)
             throw std::runtime_error("incorrect type");
-        return dynamic_cast<const typename upcast_trait<TYPE>::type&>(*this);
+        return dynamic_cast<const typename JsonCastTrait<TYPE>::type&>(*this);
     }
 
     virtual Integer& get_integer();
@@ -82,48 +71,13 @@ public:
     virtual const Null& get_null() const;
 };
 
-template <>
-struct Value::upcast_trait<Value::Type::integer> {
-    using type = Integer;
-};
-
-template <>
-struct Value::upcast_trait<Value::Type::real> {
-    using type = Real;
-};
-
-template <>
-struct Value::upcast_trait<Value::Type::boolean> {
-    using type = Boolean;
-};
-
-template <>
-struct Value::upcast_trait<Value::Type::string> {
-    using type = String;
-};
-
-template <>
-struct Value::upcast_trait<Value::Type::array> {
-    using type = Array;
-};
-
-template <>
-struct Value::upcast_trait<Value::Type::object> {
-    using type = Object;
-};
-
-template <>
-struct Value::upcast_trait<Value::Type::null> {
-    using type = Null;
-};
-
-template <typename Primitive, Value::Type T>
+template <typename Primitive, JsonType T>
 class PrimitiveJsonValue : public Value {
 public:
     using value_type = Primitive;
     static constexpr auto type = T;
 
-    Type get_type() const override {
+    JsonType get_type() const override {
         return type;
     }
 
@@ -173,7 +127,7 @@ protected:
     value_type value;
 };
 
-class Integer final : public PrimitiveJsonValue<int, Value::Type::integer> {
+class Integer final : public PrimitiveJsonValue<int, JsonType::integer> {
 public:
     Integer() = default;
     Integer(std::istream& is);
@@ -183,7 +137,7 @@ public:
     using PrimitiveJsonValue::PrimitiveJsonValue;
 };
 
-class Real final : public PrimitiveJsonValue<double, Value::Type::real> {
+class Real final : public PrimitiveJsonValue<double, JsonType::real> {
 public:
     Real() = default;
     Real(std::istream& is);
@@ -193,7 +147,7 @@ public:
     using PrimitiveJsonValue::PrimitiveJsonValue;
 };
 
-class Boolean final : public PrimitiveJsonValue<bool, Value::Type::boolean> {
+class Boolean final : public PrimitiveJsonValue<bool, JsonType::boolean> {
 public:
     Boolean() = default;
     Boolean(std::istream& is);
@@ -203,8 +157,7 @@ public:
     using PrimitiveJsonValue::PrimitiveJsonValue;
 };
 
-class String final
-    : public PrimitiveJsonValue<std::string, Value::Type::string> {
+class String final : public PrimitiveJsonValue<std::string, JsonType::string> {
 public:
     String() = default;
     String(std::istream& is);
@@ -217,7 +170,7 @@ public:
 };
 
 class Array final
-    : public PrimitiveJsonValue<std::vector<Variadic>, Value::Type::array> {
+    : public PrimitiveJsonValue<std::vector<Variadic>, JsonType::array> {
 public:
     std::unique_ptr<Value> clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
@@ -271,8 +224,8 @@ public:
     void pop_back();
 };
 
-class Object final : public PrimitiveJsonValue<std::map<String, Variadic>,
-                                               Value::Type::object> {
+class Object final
+    : public PrimitiveJsonValue<std::map<String, Variadic>, JsonType::object> {
 public:
     std::unique_ptr<Value> clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
@@ -317,8 +270,8 @@ public:
     Null() = default;
     Null(std::istream& is);
 
-    static constexpr auto type = Type::null;
-    Type get_type() const override;
+    static constexpr auto type = JsonType::null;
+    JsonType get_type() const override;
     std::unique_ptr<Value> clone() const override;
     std::ostream& write_json_to_stream(std::ostream& os) const override;
     void read_json_from_stream(std::istream& is) override;
@@ -362,12 +315,4 @@ public:
 private:
     std::unique_ptr<Value> value;
 };
-}
-
-namespace std {
-template <typename Primitive, Genrile::Value::Type T>
-void swap(Genrile::PrimitiveJsonValue<Primitive, T>& a,
-          Genrile::PrimitiveJsonValue<Primitive, T>& b) {
-    std::swap(a.value, b.value);
-}
 }

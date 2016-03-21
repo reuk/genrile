@@ -4,6 +4,7 @@ file(GLOB sources "*.cpp")
 
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/meta
     "/usr/local/include/"
 )
 

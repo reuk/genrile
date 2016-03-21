@@ -1,4 +1,5 @@
 -Isrc
+-Imeta
 -Wall
 -Werror
 -ferror-limit=100
