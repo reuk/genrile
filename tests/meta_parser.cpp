@@ -65,13 +65,13 @@ TEST_CASE("integer", "[Integer]") {
 template <typename P>
 void string_tests() {
     {
-        using parser_type = run_parser<P, MPLLIBS_STRING("\"\"")>;
+        using parser_type = run_parser<P, MPLLIBS_STRING(R"("")")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
         static_assert(equal<parser_type, MPLLIBS_STRING("")>::value,
                       "parse failure");
     }
     {
-        using parser_type = run_parser<P, MPLLIBS_STRING("\"hello world\"")>;
+        using parser_type = run_parser<P, MPLLIBS_STRING(R"("hello world")")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
         static_assert(equal<parser_type, MPLLIBS_STRING("hello world")>::value,
                       "parse failure");
@@ -90,8 +90,8 @@ TEST_CASE("array parser internals", "[Array]") {
         static_assert(parser_type() == 1, "parse failure");
     }
     {
-        using parser_type =
-            run_parser<array_comma_element, MPLLIBS_STRING(",\"hello world\"")>;
+        using parser_type = run_parser<array_comma_element,
+                                       MPLLIBS_STRING(R"(,"hello world")")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
         static_assert(equal<parser_type, MPLLIBS_STRING("hello world")>::value,
                       "parse failure");
@@ -107,7 +107,7 @@ TEST_CASE("array parser internals", "[Array]") {
 
     {
         using parser_type = run_parser<wrap_into_vector<value_parser>,
-                                       MPLLIBS_STRING("\"hello world\"")>;
+                                       MPLLIBS_STRING(R"("hello world")")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
         static_assert(
             equal<parser_type, vector<MPLLIBS_STRING("hello world")>>::value,
@@ -156,10 +156,10 @@ void array_tests() {
                       "parse failure");
     }
     {
-        using parser_type =
-            run_parser<P,
-                       MPLLIBS_STRING("[[1, 2, \"true\", false, null], "
-                                      "true, [], 4, 5, \"hello world\"]")>;
+        using parser_type = run_parser<
+            P,
+            MPLLIBS_STRING(
+                R"([[1, 2, "true", false, null], true, [], 4, 5, "hello world"])")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
     }
 }
@@ -171,7 +171,7 @@ TEST_CASE("array", "[Array]") {
 TEST_CASE("object parser internals", "[Object]") {
     {
         using parser_type = run_parser<object_pair_parser,
-                                       MPLLIBS_STRING("\"key\" : \"value\"")>;
+                                       MPLLIBS_STRING(R"("key" : "value")")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
         static_assert(
             std::is_same<
@@ -181,8 +181,8 @@ TEST_CASE("object parser internals", "[Object]") {
     }
 
     {
-        using parser_type =
-            run_parser<object_pair_parser, MPLLIBS_STRING("\"key\":[1, 2, 3]")>;
+        using parser_type = run_parser<object_pair_parser,
+                                       MPLLIBS_STRING(R"("key":[1, 2, 3])")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
     }
 }
@@ -196,7 +196,7 @@ void object_tests() {
     }
 
     {
-        using parser_type = run_parser<P, MPLLIBS_STRING("{\"str\":1}")>;
+        using parser_type = run_parser<P, MPLLIBS_STRING(R"({"str":1})")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
         static_assert(
             equal<parser_type,
@@ -206,15 +206,15 @@ void object_tests() {
 
     {
         using parser_type =
-            run_parser<P, MPLLIBS_STRING("{\"str\":1, \"str 2\":2}")>;
+            run_parser<P, MPLLIBS_STRING(R"({"str":1, "str 2":2})")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
     }
 
     {
-        using parser_type =
-            run_parser<P,
-                       MPLLIBS_STRING("{\"str\":1, \"str 2\":2, \"an array\"  "
-                                      ": [1, 2, [], 4] , \"a null\" : null }")>;
+        using parser_type = run_parser<
+            P,
+            MPLLIBS_STRING(
+                R"({"str":1, "str 2":2, "an array"  : [1, 2, [], 4] , "a null" : null })")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
     }
 }
