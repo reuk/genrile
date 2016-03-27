@@ -1,6 +1,6 @@
 #pragma once
 
-#define MPLLIBS_LIMIT_STRING_SIZE 128
+#include "container_helpers.h"
 
 #include <mpllibs/metaparse/string.hpp>
 #include <mpllibs/metaparse/start.hpp>
@@ -16,48 +16,105 @@
 #include <mpllibs/metaparse/one_char_except_c.hpp>
 #include <mpllibs/metaparse/is_error.hpp>
 #include <mpllibs/metaparse/foldl.hpp>
+#include <mpllibs/metaparse/foldl1.hpp>
 #include <mpllibs/metaparse/foldlp.hpp>
 #include <mpllibs/metaparse/last_of.hpp>
 #include <mpllibs/metaparse/transform.hpp>
 #include <mpllibs/metaparse/empty.hpp>
 #include <mpllibs/metaparse/sequence.hpp>
+#include <mpllibs/metaparse/digit.hpp>
+
+#include <mpllibs/metamonad/box.hpp>
+
+#include "boost/mpl/copy.hpp"
 
 namespace genrile {
 namespace metaparse {
 
 using namespace mpllibs::metaparse;
+using namespace mpllibs::metamonad;
 
-class null {
+class Null {
 public:
-    using type = null;
-};
-class true_ : public std::true_type {
-public:
-    using type = true_;
-};
-class false_ : public std::false_type {
-public:
-    using type = false_;
+    using type = Null;
 };
 
-using null_parser = token<keyword<MPLLIBS_STRING("null"), null>::type>::type;
+using null_parser = token<keyword<MPLLIBS_STRING("null"), Null>::type>::type;
 
-using boolean_parser =
-    token<one_of<keyword<MPLLIBS_STRING("true"), true_>::type,
-                 keyword<MPLLIBS_STRING("false"), false_>::type>::type>::type;
+using boolean_parser = token<
+    one_of<keyword<MPLLIBS_STRING("true"), std::true_type>::type,
+           keyword<MPLLIBS_STRING("false"), std::false_type>::type>::type>::type;
 
-//  TODO a smarter way of parsing ints that evaluates negative numbers
-using integer_parser = token<int_>::type;
+using digit_1_9_parser = one_of<lit_c<'1'>::type,
+                                lit_c<'2'>::type,
+                                lit_c<'3'>::type,
+                                lit_c<'4'>::type,
+                                lit_c<'5'>::type,
+                                lit_c<'6'>::type,
+                                lit_c<'7'>::type,
+                                lit_c<'8'>::type,
+                                lit_c<'9'>::type>::type;
+
+using digit_parser = digit;
+
+using digits_parser = foldl1<
+    digit_parser,
+    string<>::type,
+    boost::mpl::lambda<
+        boost::mpl::push_back<boost::mpl::_1, boost::mpl::_2>>::type>::type;
+
+struct concat_mpl_strings {
+    using type = concat_mpl_strings;
+    template<typename pair>
+    struct apply {
+        using type =
+            typename boost::mpl::copy<typename boost::mpl::back<pair>::type,
+                             boost::mpl::back_inserter<
+                                 typename boost::mpl::front<pair>::type>>::type;
+    };
+};
+
+using positive_int_parser =
+    token<one_of<transform<sequence<wrap_into_string<digit_1_9_parser>::type,
+                                    digits_parser>::type,
+                           concat_mpl_strings>::type,
+                 wrap_into_string<digit_parser>::type>::type>::type;
+
+template <typename T>
+struct boxed_integer_string : public box<T> {
+    using type = boxed_integer_string;
+};
+template <typename T>
+struct boxed_real_string : public box<T> {
+    using type = boxed_real_string;
+};
+
+struct box_integer_string {
+    template<typename T>
+    using apply = boxed_integer_string<T>;
+};
+
+struct box_real_string {
+    template<typename T>
+    using apply = boxed_real_string<T>;
+};
+
+using integer_parser = transform<
+    one_of<positive_int_parser,
+           transform<sequence<wrap_into_string<lit_c<'-'>::type>::type,
+                              positive_int_parser>::type,
+                     concat_mpl_strings>::type>::type,
+    box_integer_string>::type;
 
 //  TODO some way of parsing doubles (maybe using constexpr)
 
-using open_square_token     = token<lit_c<'['>::type>::type;
-using closed_square_token   = token<lit_c<']'>::type>::type;
-using open_curly_token      = token<lit_c<'{'>::type>::type;
-using closed_curly_token    = token<lit_c<'}'>::type>::type;
-using comma_token           = token<lit_c<','>::type>::type;
-using quote_token           = token<lit_c<'"'>::type>::type;
-using colon_token           = token<lit_c<':'>::type>::type;
+using open_square_token = token<lit_c<'['>::type>::type;
+using closed_square_token = token<lit_c<']'>::type>::type;
+using open_curly_token = token<lit_c<'{'>::type>::type;
+using closed_curly_token = token<lit_c<'}'>::type>::type;
+using comma_token = token<lit_c<','>::type>::type;
+using quote_token = token<lit_c<'"'>::type>::type;
+using colon_token = token<lit_c<':'>::type>::type;
 
 //  TODO a smarter way of parsing strings that allows for escaping characters
 using string_parser = middle_of<
@@ -71,50 +128,10 @@ using string_parser = middle_of<
 
 struct value_parser;
 
-//  vector helpers
-struct empty_vector {
-    using type = empty_vector;
-    template <typename T>
-    struct apply {
-        using type = typename boost::mpl::vector0<>::type;
-    };
-};
-
-struct single_element_vector {
-    using type = single_element_vector;
-    template <typename T>
-    struct apply {
-        using type = typename boost::mpl::vector<T>::type;
-    };
-};
-
-template<typename P>
-using wrap_into_vector = typename transform<P, single_element_vector>::type;
-
-//  map helpers
-struct empty_map {
-    using type = empty_map;
-    template <typename T>
-    struct apply {
-        using type = typename boost::mpl::map0<>::type;
-    };
-};
-
-struct single_element_map {
-    using type = single_element_map;
-    template<typename T>
-    struct apply {
-        using type = typename boost::mpl::map<T>::type;
-    };
-};
-
-template<typename P>
-using wrap_into_map = typename transform<P, single_element_map>::type;
-
 //  object parsers
 struct pair_from_object_sequence {
     using type = pair_from_object_sequence;
-    template<typename T>
+    template <typename T>
     struct apply {
         using type =
             typename boost::mpl::pair<typename boost::mpl::front<T>::type,
@@ -165,6 +182,5 @@ struct value_parser : public one_of<null_parser,
                                     integer_parser>::type {};
 
 using json_parser = one_of<array_parser, object_parser>::type;
-
 }
 }
