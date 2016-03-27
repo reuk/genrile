@@ -50,6 +50,24 @@ TEST_CASE("scratch", "[Scratch]") {
                                        MPLLIBS_STRING("-123")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
     }
+
+    {
+        using parser_type =
+            run_parser<genrile::metaparse::frac_parser, MPLLIBS_STRING(".123")>;
+        static_assert(!is_error<parser_type>::type::value, "parse failure");
+    }
+
+    {
+        using parser_type =
+            run_parser<genrile::metaparse::exp_parser, MPLLIBS_STRING("E+123")>;
+        static_assert(!is_error<parser_type>::type::value, "parse failure");
+    }
+
+    {
+        using parser_type = run_parser<genrile::metaparse::real_parser,
+                                       MPLLIBS_STRING("123.46E+123")>;
+        static_assert(!is_error<parser_type>::type::value, "parse failure");
+    }
 }
 
 template <typename P>

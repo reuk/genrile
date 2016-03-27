@@ -15,9 +15,14 @@ template <typename T>
 class ConstexprValue {
 public:
     using value_type = T;
-    constexpr ConstexprValue(value_type v): v(v) {}
-//    constexpr value_type get() const {return v;}
-    constexpr operator value_type() const {return v;}
+    constexpr ConstexprValue(value_type v)
+            : v(v) {
+    }
+    //    constexpr value_type get() const {return v;}
+    constexpr operator value_type() const {
+        return v;
+    }
+
 private:
     value_type v;
 };
@@ -42,7 +47,7 @@ public:
 };
 
 //  transform type trait
-template<typename T>
+template <typename T>
 struct constexpr_transform_trait {
     using type = T;
     static constexpr type run() {
@@ -50,7 +55,7 @@ struct constexpr_transform_trait {
     }
 };
 
-template<>
+template <>
 struct constexpr_transform_trait<std::true_type> {
     using type = Boolean;
     static constexpr type run() {
@@ -58,7 +63,7 @@ struct constexpr_transform_trait<std::true_type> {
     }
 };
 
-template<>
+template <>
 struct constexpr_transform_trait<std::false_type> {
     using type = Boolean;
     static constexpr type run() {
@@ -76,11 +81,11 @@ private:
     static constexpr auto length = boost::mpl::size<MetaString>::value;
     template <size_t... indices>
     static constexpr std::array<char, length + 1> run(
-        const std::index_sequence<indices...>&) {
-        return std::array<char, length + 1>{{
-            boost::mpl::at_c<MetaString, indices>::type::value..., '\0'
-        }};
+        const std::index_sequence<indices...> &) {
+        return std::array<char, length + 1>{
+            {boost::mpl::at_c<MetaString, indices>::type::value..., '\0'}};
     }
+
 public:
     static constexpr std::array<char, length + 1> run() {
         return run(std::make_index_sequence<length>{});
@@ -91,7 +96,7 @@ template <char... contents>
 struct constexpr_transform_trait<string<contents...>>
     : public to_c_string<string<contents...>> {};
 
-template<typename T>
+template <typename T>
 struct constexpr_transform_trait<boxed_integer_string<T>> {
     using type = Integer;
     static constexpr type run() {
@@ -118,7 +123,7 @@ struct constexpr_transform_trait<boxed_integer_string<T>> {
     }
 };
 
-template<typename T>
+template <typename T>
 struct constexpr_transform_trait<boxed_real_string<T>> {
     using type = Real;
     static constexpr type run() {
@@ -126,6 +131,5 @@ struct constexpr_transform_trait<boxed_real_string<T>> {
         return 0;
     }
 };
-
 }
 }

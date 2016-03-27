@@ -41,9 +41,12 @@ public:
 
 using null_parser = token<keyword<MPLLIBS_STRING("null"), Null>::type>::type;
 
-using boolean_parser = token<
-    one_of<keyword<MPLLIBS_STRING("true"), std::true_type>::type,
-           keyword<MPLLIBS_STRING("false"), std::false_type>::type>::type>::type;
+using boolean_parser = token<one_of<
+    keyword<MPLLIBS_STRING("true"), std::true_type>::type,
+    keyword<MPLLIBS_STRING("false"), std::false_type>::type>::type>::type;
+
+template <typename T>
+using literal_keyword = typename keyword<T, T>::type;
 
 using digit_1_9_parser = one_of<lit_c<'1'>::type,
                                 lit_c<'2'>::type,
@@ -63,14 +66,22 @@ using digits_parser = foldl1<
     boost::mpl::lambda<
         boost::mpl::push_back<boost::mpl::_1, boost::mpl::_2>>::type>::type;
 
-struct concat_mpl_strings {
-    using type = concat_mpl_strings;
-    template<typename pair>
+struct join_mpl_strings {
+    using type = join_mpl_strings;
+    template <typename a, typename b>
     struct apply {
         using type =
-            typename boost::mpl::copy<typename boost::mpl::back<pair>::type,
-                             boost::mpl::back_inserter<
-                                 typename boost::mpl::front<pair>::type>>::type;
+            typename boost::mpl::copy<b, boost::mpl::back_inserter<a>>::type;
+    };
+};
+
+struct concat_mpl_strings {
+    using type = concat_mpl_strings;
+    template <typename collection>
+    struct apply {
+        using type = typename boost::mpl::fold<collection,
+                                               string<>,
+                                               join_mpl_strings>::type;
     };
 };
 
@@ -79,6 +90,20 @@ using positive_int_parser =
                                     digits_parser>::type,
                            concat_mpl_strings>::type,
                  wrap_into_string<digit_parser>::type>::type>::type;
+
+using frac_parser = transform<
+    sequence<wrap_into_string<lit_c<'.'>::type>::type, digits_parser>::type,
+    concat_mpl_strings>::type;
+
+using e_parser = one_of<literal_keyword<MPLLIBS_STRING("e+")>,
+                        literal_keyword<MPLLIBS_STRING("e-")>,
+                        literal_keyword<MPLLIBS_STRING("e")>,
+                        literal_keyword<MPLLIBS_STRING("E+")>,
+                        literal_keyword<MPLLIBS_STRING("E-")>,
+                        literal_keyword<MPLLIBS_STRING("E")>>::type;
+
+using exp_parser = transform<sequence<e_parser, digits_parser>::type,
+                             concat_mpl_strings>::type;
 
 template <typename T>
 struct boxed_integer_string : public box<T> {
@@ -90,21 +115,31 @@ struct boxed_real_string : public box<T> {
 };
 
 struct box_integer_string {
-    template<typename T>
+    template <typename T>
     using apply = boxed_integer_string<T>;
 };
 
 struct box_real_string {
-    template<typename T>
+    template <typename T>
     using apply = boxed_real_string<T>;
 };
 
-using integer_parser = transform<
+using i_parser =
     one_of<positive_int_parser,
            transform<sequence<wrap_into_string<lit_c<'-'>::type>::type,
                               positive_int_parser>::type,
-                     concat_mpl_strings>::type>::type,
-    box_integer_string>::type;
+                     concat_mpl_strings>::type>::type;
+
+using integer_parser = transform<i_parser, box_integer_string>::type;
+
+using r_parser = one_of<
+    transform<sequence<i_parser, frac_parser, exp_parser>::type,
+              concat_mpl_strings>::type,
+    transform<sequence<i_parser, exp_parser>::type, concat_mpl_strings>::type,
+    transform<sequence<i_parser, frac_parser>::type,
+              concat_mpl_strings>::type>::type;
+
+using real_parser = transform<r_parser, box_real_string>::type;
 
 //  TODO some way of parsing doubles (maybe using constexpr)
 
