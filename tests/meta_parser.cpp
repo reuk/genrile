@@ -93,38 +93,38 @@ void integer_tests() {
 
     static_assert(
         constexpr_transform_trait<genrile::metaparse::boxed_integer_string<
-                MPLLIBS_STRING("0")>>::run() == 0,
+                MPLLIBS_STRING("0")>>::value == 0,
         "conversion failure");
     static_assert(
         constexpr_transform_trait<genrile::metaparse::boxed_integer_string<
-                MPLLIBS_STRING("1")>>::run() == 1,
+                MPLLIBS_STRING("1")>>::value == 1,
         "conversion failure");
     static_assert(
         constexpr_transform_trait<genrile::metaparse::boxed_integer_string<
-                MPLLIBS_STRING("-1")>>::run() == -1,
-        "conversion failure");
-
-    static_assert(
-        constexpr_transform_trait<genrile::metaparse::boxed_integer_string<
-                MPLLIBS_STRING("-12345")>>::run() == -12345,
+                MPLLIBS_STRING("-1")>>::value == -1,
         "conversion failure");
 
     static_assert(
         constexpr_transform_trait<genrile::metaparse::boxed_integer_string<
-                MPLLIBS_STRING("987")>>::run() == 987,
+                MPLLIBS_STRING("-12345")>>::value == -12345,
+        "conversion failure");
+
+    static_assert(
+        constexpr_transform_trait<genrile::metaparse::boxed_integer_string<
+                MPLLIBS_STRING("987")>>::value == 987,
         "conversion failure");
 
     {
         using parser_type = run_parser<P, MPLLIBS_STRING("0")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(value == 0, "parse failure");
     }
 
     {
         using parser_type = run_parser<P, MPLLIBS_STRING("2")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(value == 2, "parse failure");
     }
 
@@ -133,7 +133,7 @@ void integer_tests() {
             build_parser<integer_parser>::apply<MPLLIBS_STRING("-2")>::type;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
         //        static_assert(parser_type::value == -2, "parse failure");
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(value == -2, "parse failure");
     }
 
@@ -141,7 +141,7 @@ void integer_tests() {
         using parser_type =
             build_parser<integer_parser>::apply<MPLLIBS_STRING("-0")>::type;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(value == 0, "parse failure");
     }
 
@@ -149,7 +149,7 @@ void integer_tests() {
         using parser_type = build_parser<integer_parser>::apply<MPLLIBS_STRING(
             "-123456")>::type;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(value == -123456, "parse failure");
     }
 }
@@ -184,40 +184,40 @@ template <typename P>
 void real_tests() {
     static_assert(
         constexpr_transform_trait<genrile::metaparse::boxed_real_string<
-                MPLLIBS_STRING("0")>>::run() == 0,
+                MPLLIBS_STRING("0")>>::value == 0,
         "conversion failure");
 
     static_assert(
         constexpr_transform_trait<genrile::metaparse::boxed_real_string<
-                MPLLIBS_STRING("0.0")>>::run() == 0.0,
+                MPLLIBS_STRING("0.0")>>::value == 0.0,
         "conversion failure");
 
     static_assert(
         constexpr_transform_trait<genrile::metaparse::boxed_real_string<
-                MPLLIBS_STRING("0.1")>>::run() == 0.1,
+                MPLLIBS_STRING("0.1")>>::value == 0.1,
         "conversion failure");
 
     static_assert(
         constexpr_transform_trait<genrile::metaparse::boxed_real_string<
-                MPLLIBS_STRING("123.456")>>::run() == 123.456,
+                MPLLIBS_STRING("123.456")>>::value == 123.456,
         "conversion failure");
 
     static_assert(
         constexpr_transform_trait<genrile::metaparse::boxed_real_string<
-                MPLLIBS_STRING("-123.456e12")>>::run() == -123.456e12,
+                MPLLIBS_STRING("-123.456e12")>>::value == -123.456e12,
         "conversion failure");
 
     {
         using parser_type = run_parser<P, MPLLIBS_STRING("0.0")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(value == 0, "parse failure");
     }
 
     {
         using parser_type = run_parser<P, MPLLIBS_STRING("2.0")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(value == 2, "parse failure");
     }
 
@@ -226,7 +226,7 @@ void real_tests() {
             build_parser<integer_parser>::apply<MPLLIBS_STRING("-2.0")>::type;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
         //        static_assert(parser_type::value == -2, "parse failure");
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(value == -2, "parse failure");
     }
 
@@ -234,7 +234,7 @@ void real_tests() {
         using parser_type =
             build_parser<integer_parser>::apply<MPLLIBS_STRING("-0.0")>::type;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(value == 0, "parse failure");
     }
 
@@ -242,7 +242,7 @@ void real_tests() {
         using parser_type = build_parser<integer_parser>::apply<MPLLIBS_STRING(
             "-123456.0")>::type;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(value == -123456.0, "parse failure");
     }
 }
@@ -258,18 +258,14 @@ void string_tests() {
         static_assert(!is_error<parser_type>::type::value, "parse failure");
         static_assert(equal<parser_type, MPLLIBS_STRING("")>::value,
                       "parse failure");
-
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
-        static_assert(value.size() == 1, "parse failure");
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
     }
     {
         using parser_type = run_parser<P, MPLLIBS_STRING(R"("\"")")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
         static_assert(equal<parser_type, MPLLIBS_STRING("\"")>::value,
                       "parse failure");
-
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
-        static_assert(value.size() == 2, "parse failure");
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
     }
     {
         using parser_type = run_parser<P, MPLLIBS_STRING(R"("hello world")")>;
@@ -277,8 +273,7 @@ void string_tests() {
         static_assert(equal<parser_type, MPLLIBS_STRING("hello world")>::value,
                       "parse failure");
 
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
-        static_assert(value.size() == 12, "parse failure");
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(value[0] == 'h', "parse failure");
         static_assert(value[10] == 'd', "parse failure");
         static_assert(value[11] == '\0', "parse failure");
@@ -454,7 +449,7 @@ void boolean_tests() {
         using parser_type = run_parser<P, MPLLIBS_STRING("true")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
         static_assert(parser_type(), "parse failure");
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(value, "parse failure");
     }
 
@@ -462,7 +457,7 @@ void boolean_tests() {
         using parser_type = run_parser<P, MPLLIBS_STRING("false")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
         static_assert(!parser_type(), "parse failure");
-        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        constexpr auto value = constexpr_transform_trait<parser_type>::value;
         static_assert(!value, "parse failure");
     }
 }

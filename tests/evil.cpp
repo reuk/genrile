@@ -7,20 +7,29 @@
 #include <mpllibs/metaparse/build_parser.hpp>
 #include <mpllibs/metaparse/is_error.hpp>
 
-template <typename PARSER, typename STR>
-using run_parser = typename mpllibs::metaparse::build_parser<
-    PARSER>::template apply<STR>::type;
+template <typename T>
+struct PrintType;
 
 using genrile::metaparse::json_parser;
 
 using mpllibs::metaparse::is_error;
 
+template <typename PARSER, typename STR>
+using run_parser = typename mpllibs::metaparse::build_parser<
+    PARSER>::template apply<STR>::type;
+
+template <typename STR>
+using run_json_parser = typename run_parser<json_parser, STR>::type;
+
 TEST_CASE("slightly evil", "[Slightly Evil]") {
-    using parser_type = run_parser<json_parser, MPLLIBS_STRING(R"([
-    "JSON Test Pattern pass1"
- ,"rosebud"  ,{"a double": 1.234e45} ]
-)")>;
-    static_assert(!is_error<parser_type>::type::value, "parse failure");
+    using parsed_type = run_json_parser<MPLLIBS_STRING(R"([
+    "JSON Test Pattern pass1",
+    "rosebud",
+    {"a double": 1.234e45},
+    {"object with array of some types":[true, false, null, [], {}]}
+    ])")>;
+    static_assert(!is_error<parsed_type>::type::value, "parse failure");
+    PrintType<parsed_type> p;
 }
 
 #if 0

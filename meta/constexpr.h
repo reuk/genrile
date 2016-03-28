@@ -2,7 +2,7 @@
 
 #include "meta_parser.h"
 
-#include "boost/mpl/string.hpp"
+#include <mpllibs/metaparse/string.hpp>
 
 #include <array>
 #include <utility>
@@ -49,58 +49,35 @@ public:
 //  transform type trait
 template <typename T>
 struct constexpr_transform_trait {
-    using type = T;
-    static constexpr type run() {
-        return type();
-    }
+    using return_type = T;
+    static constexpr return_type value = return_type();
 };
 
 template <>
 struct constexpr_transform_trait<std::true_type> {
-    using type = Boolean;
-    static constexpr type run() {
-        return true;
-    }
+    using return_type = Boolean;
+    static constexpr return_type value = true;
 };
 
 template <>
 struct constexpr_transform_trait<std::false_type> {
-    using type = Boolean;
-    static constexpr type run() {
-        return false;
-    }
+    using return_type = Boolean;
+    static constexpr return_type value = false;
 };
 
 constexpr int digit_to_int(char c) {
     return c - '0';
 }
 
-template <typename MetaString>
-struct to_c_string {
-private:
-    static constexpr auto length = boost::mpl::size<MetaString>::value;
-    template <size_t... indices>
-    static constexpr std::array<char, length + 1> run(
-        const std::index_sequence<indices...> &) {
-        return std::array<char, length + 1>{
-            {boost::mpl::at_c<MetaString, indices>::type::value..., '\0'}};
-    }
-
-public:
-    static constexpr std::array<char, length + 1> run() {
-        return run(std::make_index_sequence<length>{});
-    }
-};
-
 template <char... contents>
 struct constexpr_transform_trait<string<contents...>>
-    : public to_c_string<string<contents...>> {};
+    : public boost::mpl::c_str<string<contents...>>::type {};
 
 template <typename T>
 struct constexpr_transform_trait<boxed_integer_string<T>> {
-    using type = Integer;
-    static constexpr type run() {
-        constexpr auto str = to_c_string<T>::run();
+    using return_type = Integer;
+    static constexpr return_type run() {
+        constexpr auto str = boost::mpl::c_str<T>::type::value;
 
         auto pos = 0;
 
@@ -118,17 +95,18 @@ struct constexpr_transform_trait<boxed_integer_string<T>> {
 
         return negative ? -ret : ret;
     }
+    static constexpr return_type value = run();
 };
 
 template <typename T>
 struct constexpr_transform_trait<boxed_real_string<T>> {
-    using type = Real;
+    using return_type = Real;
 
     static constexpr bool isdigit(char c) {
         return '0' <= c && c <= '9';
     }
 
-    static constexpr type run() {
+    static constexpr return_type run() {
         //  taken from
         //  opensource.apple.com/source/tcl/tcl-10/tcl/compat/strtod.c
 
@@ -137,7 +115,7 @@ struct constexpr_transform_trait<boxed_real_string<T>> {
         constexpr double powersOf10[] = {
             10., 100., 1.0e4, 1.0e8, 1.0e16, 1.0e32, 1.0e64, 1.0e128, 1.0e256};
 
-        constexpr auto string = to_c_string<T>::run();
+        constexpr auto string = boost::mpl::c_str<T>::type::value;
 
         auto p_ind = 0;
 
@@ -263,6 +241,8 @@ struct constexpr_transform_trait<boxed_real_string<T>> {
 
         return sign ? -fraction : fraction;
     }
+
+    static constexpr return_type value = run();
 };
 }
 }
