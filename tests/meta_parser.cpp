@@ -1,6 +1,7 @@
 #define MPLLIBS_LIMIT_STRING_SIZE 128
 
 #include "catch.hpp"
+
 #include "meta_parser.h"
 #include "constexpr.h"
 
@@ -67,6 +68,12 @@ TEST_CASE("scratch", "[Scratch]") {
     {
         using parser_type = run_parser<genrile::metaparse::real_parser,
                                        MPLLIBS_STRING("123.46E+123")>;
+        static_assert(!is_error<parser_type>::type::value, "parse failure");
+    }
+
+    {
+        using parser_type = run_parser<genrile::metaparse::unicode_parser,
+                                       MPLLIBS_STRING("2b1c")>;
         static_assert(!is_error<parser_type>::type::value, "parse failure");
     }
 }
@@ -254,6 +261,15 @@ void string_tests() {
 
         constexpr auto value = constexpr_transform_trait<parser_type>::run();
         static_assert(value.size() == 1, "parse failure");
+    }
+    {
+        using parser_type = run_parser<P, MPLLIBS_STRING(R"("\"")")>;
+        static_assert(!is_error<parser_type>::type::value, "parse failure");
+        static_assert(equal<parser_type, MPLLIBS_STRING("\"")>::value,
+                      "parse failure");
+
+        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        static_assert(value.size() == 2, "parse failure");
     }
     {
         using parser_type = run_parser<P, MPLLIBS_STRING(R"("hello world")")>;
@@ -462,4 +478,5 @@ TEST_CASE("value", "[Value]") {
     array_tests<value_parser>();
     object_tests<value_parser>();
     integer_tests<value_parser>();
+    real_tests<value_parser>();
 }

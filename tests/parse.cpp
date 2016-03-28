@@ -141,7 +141,7 @@ TEST_CASE("parse variadic", "[Variadic]") {
 }
 
 TEST_CASE("big string", "[Variadic]") {
-    auto test_string = R"(
+    constexpr auto test_string = R"(
 [
     "JSON Test Pattern pass1",
     {"object with 1 member":["array with 1 element"]},
