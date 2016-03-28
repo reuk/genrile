@@ -19,6 +19,7 @@ using mpllibs::metaparse::build_parser;
 using mpllibs::metaparse::is_error;
 
 using genrile::metaparse::integer_parser;
+using genrile::metaparse::real_parser;
 using genrile::metaparse::string_parser;
 using genrile::metaparse::array_comma_element;
 using genrile::metaparse::array_elements_parser;
@@ -170,6 +171,77 @@ TEST_CASE("digit", "[Digit]") {
 
 TEST_CASE("integer", "[Integer]") {
     integer_tests<integer_parser>();
+}
+
+template <typename P>
+void real_tests() {
+    static_assert(
+        constexpr_transform_trait<genrile::metaparse::boxed_real_string<
+                MPLLIBS_STRING("0")>>::run() == 0,
+        "conversion failure");
+
+    static_assert(
+        constexpr_transform_trait<genrile::metaparse::boxed_real_string<
+                MPLLIBS_STRING("0.0")>>::run() == 0.0,
+        "conversion failure");
+
+    static_assert(
+        constexpr_transform_trait<genrile::metaparse::boxed_real_string<
+                MPLLIBS_STRING("0.1")>>::run() == 0.1,
+        "conversion failure");
+
+    static_assert(
+        constexpr_transform_trait<genrile::metaparse::boxed_real_string<
+                MPLLIBS_STRING("123.456")>>::run() == 123.456,
+        "conversion failure");
+
+    static_assert(
+        constexpr_transform_trait<genrile::metaparse::boxed_real_string<
+                MPLLIBS_STRING("-123.456e12")>>::run() == -123.456e12,
+        "conversion failure");
+
+    {
+        using parser_type = run_parser<P, MPLLIBS_STRING("0.0")>;
+        static_assert(!is_error<parser_type>::type::value, "parse failure");
+        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        static_assert(value == 0, "parse failure");
+    }
+
+    {
+        using parser_type = run_parser<P, MPLLIBS_STRING("2.0")>;
+        static_assert(!is_error<parser_type>::type::value, "parse failure");
+        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        static_assert(value == 2, "parse failure");
+    }
+
+    {
+        using parser_type =
+            build_parser<integer_parser>::apply<MPLLIBS_STRING("-2.0")>::type;
+        static_assert(!is_error<parser_type>::type::value, "parse failure");
+        //        static_assert(parser_type::value == -2, "parse failure");
+        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        static_assert(value == -2, "parse failure");
+    }
+
+    {
+        using parser_type =
+            build_parser<integer_parser>::apply<MPLLIBS_STRING("-0.0")>::type;
+        static_assert(!is_error<parser_type>::type::value, "parse failure");
+        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        static_assert(value == 0, "parse failure");
+    }
+
+    {
+        using parser_type = build_parser<integer_parser>::apply<MPLLIBS_STRING(
+            "-123456.0")>::type;
+        static_assert(!is_error<parser_type>::type::value, "parse failure");
+        constexpr auto value = constexpr_transform_trait<parser_type>::run();
+        static_assert(value == -123456.0, "parse failure");
+    }
+}
+
+TEST_CASE("real", "[Real]") {
+    real_tests<real_parser>();
 }
 
 template <typename P>
